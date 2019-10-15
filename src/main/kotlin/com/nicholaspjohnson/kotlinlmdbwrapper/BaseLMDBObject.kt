@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.ByteTypedRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.ShortTypedRWP
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
@@ -255,6 +256,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         }
     }
 
+    @Throws(DataNotFoundException::class)
     fun readFromDB(env: Long, dbi: Int) {
         stackPush().use { stack ->
             val key = keyFunc(stack)
@@ -265,9 +267,13 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
             val txn = pp.get(0)
 
             val dv = MDBVal.callocStack()
-            LMDB_CHECK(mdb_get(txn, dbi, kv, dv))
+            val err = mdb_get(txn, dbi, kv, dv)
+            if (err == MDB_NOTFOUND) {
+                throw DataNotFoundException("The key supplied does not have any data in the DB!")
+            } else {
+                LMDB_CHECK(err)
+            }
 
-            println(dv.mv_size())
             initBuffers(dv.mv_data()!!)
             isOnDBAddress = true
             mdb_txn_commit(txn)
