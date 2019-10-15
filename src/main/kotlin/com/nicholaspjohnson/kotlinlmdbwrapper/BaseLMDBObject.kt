@@ -24,6 +24,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var varSizeTypes: Array<LMDBType<*>?>
 
     private lateinit var nameToInts: Map<String, Int>
+    private lateinit var intsToName: Map<Int, String>
 
     private lateinit var offsets: IntArray
     private lateinit var constOffsets: IntArray
@@ -35,6 +36,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     var maxBufferSize: Int = -1
         private set
     private var constSizeSetSize: Int = -1
+    private var requestedExtraSize: Int = 0
     private var maxAlign: Int = -1
 
     /**
@@ -73,7 +75,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private fun setUsed() {
         setTypes()
         if (firstBuf == null) { // create new
-            initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
+            initBuffers(ByteBuffer.allocate(minBufferSize + requestedExtraSize).order(ByteOrder.nativeOrder()))
         } else {
             initBuffers(firstBuf!!)
         }
@@ -98,10 +100,18 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     private val haveTypes = HashMap<String, LMDBType<*>>()
-    fun addType(name: String, type: LMDBType<*>) {
+    private val minSizes = HashMap<String, Int>()
+    fun addType(name: String, type: LMDBType<*>, varSizeDefault: VarSizeDefault? = null) {
         require(!haveTypes.containsKey(name)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
         haveTypes[name] = type
+        if(varSizeDefault != null) {
+            require(!type.isConstSize) { "Const-Sized types cannot have custom space allocated!" }
+            require(varSizeDefault.min >= type.minSize) { "VarSizeDefault must be greater than or equal to the minimum size type!" }
+            require(varSizeDefault.min <= type.maxSize) { "VarSizeDefault must be less than or equal to the maximum size type!" }
+            requestedExtraSize += (varSizeDefault.min - type.minSize)
+            minSizes[name] = varSizeDefault.min
+        }
     }
 
     private fun setTypes() {
@@ -113,6 +123,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             tNameMap[s] = index
         }
         this.nameToInts = tNameMap
+        this.intsToName = tNameMap.map { Pair(it.value, it.key) }.toMap()
         minBufferSize = types.map(LMDBType<*>::minSize).sum()
         maxBufferSize = types.map(LMDBType<*>::maxSize).sum()
         offsets = IntArray(types.size) { -1 }
@@ -175,10 +186,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                         continue
                     }
 
+                    val size = minSizes.getOrDefault(intsToName.getValue(index), t.minSize)
                     offsets[index] = byteOffset
-                    sizes[index] = t.minSize
+                    sizes[index] = size
                     remainingTypes[index] = null
-                    byteOffset += t.minSize
+                    byteOffset += size
                 }
             }
         }
