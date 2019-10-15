@@ -24,14 +24,23 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         require(minSize >= align) { "minSize must be >= align!" }
     }
     companion object {
+        @JvmField
         val LBool = object: LMDBType<Boolean>(Boolean::class.java, 1, true, 1) {}
+        @JvmField
         val LByte = object : LMDBType<Byte>(Byte::class.java, 1, true, 1) {}
+        @JvmField
         val LChar = object : LMDBType<Char>(Char::class.java, 2, true, 2) {}
+        @JvmField
         val LShort = object : LMDBType<Short>(Short::class.java, 2, true, 2) {}
+        @JvmField
         val LInt = object : LMDBType<Int>(Int::class.java, 4, true, 4) {}
+        @JvmField
         val LFloat = object : LMDBType<Float>(Float::class.java, 4, true, 4) {}
+        @JvmField
         val LLong = object : LMDBType<Long>(Long::class.java, 8, true, 8) {}
+        @JvmField
         val LDouble = object : LMDBType<Double>(Double::class.java, 8, true, 8) {}
+        @JvmField
         val LVarLong = object : LMDBType<Long>(Long::class.java, 1, false, 10, 1) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
                 var size = 0
@@ -44,6 +53,7 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
             override fun getItemSizeFromPlain(item: Long) = item.getVarLongSize()
         }
 
+        @JvmStatic
         fun LVarChar(maxSize: Int): LMDBType<String> = object : LMDBType<String>(String::class.java, 1, false, maxSize, LVarLong.minSize) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
                 val diskSize = data.readVarLong(startPoint)
@@ -65,6 +75,7 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
                 return diskSizeLen + dataLenLen + item.length
             }
         }
+        @JvmStatic
         fun LFixedArray(size: Int): LMDBType<ByteArray> =
             LMDBType(ByteArray::class.java, 1, true, size)
     }
