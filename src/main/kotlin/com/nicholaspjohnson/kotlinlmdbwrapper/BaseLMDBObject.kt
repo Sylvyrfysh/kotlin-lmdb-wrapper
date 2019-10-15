@@ -38,6 +38,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private var constSizeSetSize: Int = -1
     private var requestedExtraSize: Int = 0
     private var maxAlign: Int = -1
+    private var justReadFromDB = false
 
     /**
      * True if this object has been committed to the DB, or read from the DB and not modified.
@@ -99,7 +100,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         dataLongs = data.asLongBuffer()
         dataFloats = data.asFloatBuffer()
         dataDoubles = data.asDoubleBuffer()
-        if (isOnDBAddress && hasVarSizeItems) {
+        if (justReadFromDB && hasVarSizeItems) {
             // Read from the DB- Recalculate our offsets
             var pushForward = 0
             for ((index, t) in varSizeTypes.withIndex()) {
@@ -117,6 +118,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     pushForward += (currentSize - normalSize)
                 }
             }
+            justReadFromDB = false
         }
     }
 
@@ -321,6 +323,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             }
 
             isOnDBAddress = true
+            justReadFromDB = true
             initBuffers(dv.mv_data()!!)
             mdb_txn_commit(txn)
         }
