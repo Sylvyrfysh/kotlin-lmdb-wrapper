@@ -280,6 +280,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setBool(index: Int, value: Boolean) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         data.put(offsets[index], if (value) 1.toByte() else 0.toByte())
         committed = false
     }
@@ -289,6 +292,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setByte(index: Int, value: Byte) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         data.put(offsets[index], value)
         committed = false
     }
@@ -298,6 +304,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setShort(index: Int, value: Short) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataShorts.put(offsets[index], value)
         committed = false
     }
@@ -307,6 +316,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setChar(index: Int, value: Char) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataChars.put(offsets[index], value)
         committed = false
     }
@@ -316,6 +328,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setInt(index: Int, value: Int) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataInts.put(offsets[index], value)
         committed = false
     }
@@ -325,6 +340,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setFloat(index: Int, value: Float) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataFloats.put(offsets[index], value)
         committed = false
     }
@@ -334,6 +352,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setLong(index: Int, value: Long) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataLongs.put(offsets[index], value)
         committed = false
     }
@@ -343,11 +364,17 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun setDouble(index: Int, value: Double) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         dataDoubles.put(offsets[index], value)
         committed = false
     }
 
     fun setVarLong(index: Int, value: Long) {
+        if (isOnDBAddress) {
+            TODO()
+        }
         calculateVarSizeOffsets(index, value.getVarLongSize())
         data.writeVarLong(offsets[index], value)
         committed = false
