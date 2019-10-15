@@ -128,7 +128,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         val cPrefIter = preferredOrder.filter { it in remainingTypes }.iterator()
 
         var byteOffset = 0 // for the size marker, we need an offset
-        while (remainingTypes.asList().filterNotNull().count() > 1) {
+        while (remainingTypes.asList().filterNotNull().count() > 0) {
             if (cPrefIter.hasNext()) {
                 val cPref = cPrefIter.next()
                 for ((index, t) in remainingTypes.withIndex()) {
@@ -167,6 +167,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                         maxAlign = maxAlign.coerceAtLeast(t.align)
                     }
                 }
+
+                varSizeTypes = remainingTypes.copyOf()
                 //non-const sized things will fall here
                 for ((index, t) in remainingTypes.withIndex()) {
                     if (t == null) {
@@ -180,8 +182,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 }
             }
         }
-
-        varSizeTypes = remainingTypes
     }
 
     private fun calculateVarSizeOffsets(changedIdx: Int, newSize: Int) {
@@ -193,7 +193,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         var needsChange = false
         val newOffsets = offsets.copyOf()
 
-        while (remainingTypes.asList().filterNotNull().count() > 1) {
+        while (remainingTypes.asList().filterNotNull().count() > 0) {
             for ((index, t) in remainingTypes.withIndex()) {
                 if (t == null) {
                     continue
@@ -201,22 +201,28 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
                 if (needsChange) {
                     newOffsets[index] += (newSize - sizes[changedIdx])
-                    remainingTypes[index] = null
                 } else if (index == changedIdx) {
                     needsChange = true
                 }
+                remainingTypes[index] = null
             }
         }
 
-        if (newOffsets.isNotEmpty()) {
+        if (!newOffsets.contentEquals(offsets)) {
             val newBuffer = data.capacity() < ((newSize - sizes[changedIdx]) + sizes.sum())
             val writeBuf =
-                if (newBuffer) ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum()).put(data).position(0) else data
+                if (newBuffer) {
+                    ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum())
+                        .order(ByteOrder.nativeOrder())
+                        .put(data)
+                        .position(0)
+                } else {
+                    data
+                }
             for (i in newOffsets.toList().withIndex().filterNot { it.value == offsets[it.index] }.sortedByDescending { it.value }) {
                 val dCpy = ByteArray(sizes[i.index])
                 data.position(offsets[i.index]).get(dCpy)
                 writeBuf.position(i.value).put(dCpy)
-                TODO("Think it works, check it over though")
             }
             if (newBuffer) {
                 initBuffers(writeBuf)

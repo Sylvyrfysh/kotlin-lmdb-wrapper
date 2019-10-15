@@ -36,7 +36,7 @@ open class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMD
             Float::class -> FloatRWP(obj, prop.name)
             Long::class -> {
                 if (prop.annotations.filterIsInstance<VarLong>().isNotEmpty()) {
-                    TODO("VarLong is not yet implemented!")
+                    VarLongRWP(obj, prop.name)
                 } else {
                     LongRWP(obj, prop.name)
                 }
