@@ -54,16 +54,13 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         }
 
         @JvmStatic
-        fun LVarChar(maxSize: Int): LMDBType<String> = object : LMDBType<String>(String::class.java, 1, false, maxSize, LVarLong.minSize) {
+        fun LVarChar(maxSize: Int): LMDBType<String> = object : LMDBType<String>(String::class.java, 1, false, maxSize + (2 * maxSize.toLong().getVarLongSize()), LVarLong.minSize) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
                 val diskSize = data.readVarLong(startPoint)
                 if (diskSize == 0L) {
                     return 1
                 }
-                val diskSizeLen = LVarLong.getItemSizeFromDB(data, startPoint)
-                val dataLenLen = LVarLong.getItemSizeFromDB(data, startPoint + diskSizeLen)
-                val curDataLen = data.readVarLong(startPoint + diskSizeLen + dataLenLen)
-                return (diskSizeLen + dataLenLen + curDataLen).toInt()
+                return diskSize.toInt()
             }
 
             override fun getItemSizeFromPlain(item: String): Int {

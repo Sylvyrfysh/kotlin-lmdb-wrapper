@@ -455,7 +455,47 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     fun getVarLong(index: Int): Long {
-        return data.readVarLong(index)
+        return data.readVarLong(offsets[index])
+    }
+
+    fun setVarChar(index: Int, value: String) {
+        val utf8Data = MemoryUtil.memUTF8(value, true)
+        val memUTF8Len = utf8Data.capacity()
+        val fullSize = memUTF8Len + (2 * memUTF8Len.toLong().getVarLongSize())
+        require(fullSize <= types[index].maxSize) { "Item exceeds VarChar size!" }
+        if (isOnDBAddress) {
+            TODO()
+        }
+        calculateVarSizeOffsets(index, fullSize)
+        val diskSizeLen = sizes[index].toLong().getVarLongSize()
+        val diskSize = sizes[index].toLong()
+        data.writeVarLong(offsets[index], diskSize)
+        val currentSizeLen = memUTF8Len.toLong().getVarLongSize()
+        data.writeVarLong(offsets[index] + diskSizeLen, memUTF8Len.toLong())
+        data.position(offsets[index] + diskSizeLen + currentSizeLen).put(utf8Data.position(0)).position(0)
+
+        committed = false
+    }
+
+    fun getVarChar(index: Int): String {
+        val diskSizeLen = data.readVarLong(offsets[index]).getVarLongSize()
+        if (diskSizeLen == 0) {
+            return ""
+        }
+        val currentSize = data.readVarLong(offsets[index] + diskSizeLen)
+        return if (data.isDirect) {
+            MemoryUtil.memUTF8(data, currentSize.toInt(), offsets[index] + diskSizeLen + currentSize.getVarLongSize())
+        } else {
+            stackPush().use { stack ->
+                val dirBuf = stack.malloc(currentSize.toInt())
+                val oldLimit = data.limit()
+                dirBuf.put(data.limit(offsets[index] + diskSizeLen + currentSize.getVarLongSize() + currentSize.toInt()).position(offsets[index] + diskSizeLen + currentSize.getVarLongSize()))
+                data.position(0).limit(oldLimit)
+
+                dirBuf.position(0)
+                MemoryUtil.memUTF8(dirBuf, currentSize.toInt())
+            }
+        }
     }
 
     fun getInd(name: String): Int {

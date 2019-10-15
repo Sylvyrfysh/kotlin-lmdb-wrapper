@@ -3,13 +3,14 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 import java.nio.ByteBuffer
 import org.lwjgl.util.lmdb.LMDB.mdb_strerror
 import org.lwjgl.util.lmdb.LMDB.MDB_SUCCESS
+import kotlin.experimental.and
 
 fun ByteBuffer.readVarLong(startPoint: Int): Long {
     var idx = 0
     var ret = 0L
     do {
         ret += (this[startPoint + idx].toLong() and 0x7F) shl (idx * 7)
-    } while (this[startPoint + idx++] < 128.toByte())
+    } while (this[startPoint + idx++].toInt() and 0x80 == 0x80)
     return ret
 }
 

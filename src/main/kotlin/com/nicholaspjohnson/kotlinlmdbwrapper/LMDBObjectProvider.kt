@@ -44,9 +44,7 @@ open class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMD
             }
             Double::class -> DoubleRWP(obj, prop.name)
             String::class -> {
-                val maxL = (prop.annotations.filterIsInstance<VarChar>().firstOrNull() ?: error("Strings must have the VarChar annotation")).maxLength
-                require(maxL > 0) { "VarChar must have a length of at least one!" }
-                TODO("VarChar is not yet implemented!")
+                VarCharRWP(obj, prop.name)
             }
             else -> error("New type no impl ${prop.returnType}")
         }
