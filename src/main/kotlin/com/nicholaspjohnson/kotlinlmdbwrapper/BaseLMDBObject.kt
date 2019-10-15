@@ -279,29 +279,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     protected val db = LMDBBaseObjectProvider(this)
 
-    protected fun <T : Serializable> db(index: Int, type: T): ReadWriteProperty<M, T> {
-        TODO()
-        // TODO: Serialize to BAOS, them copy in
-        /*return when (type) {
-            LMDBType.LByte -> ByteRWP(index)
-            LMDBType.LShort -> ShortRWP(index)
-            else -> error("Type $type is not supported yet!")
-        }*/
-    }
-
-    protected fun <T, R> db(
-        index: Int,
-        type: LMDBType<T>,
-        convertTo: (T) -> R,
-        convertFrom: (R) -> T
-    ): ReadWriteProperty<M, R> {
-        return when (type) {
-            LMDBType.LByte -> ByteTypedRWP(index, convertTo, convertFrom)
-            LMDBType.LShort -> ShortTypedRWP(index, convertTo, convertFrom)
-            else -> error("Type $type with conversions is not supported yet!")
-        }
-    }
-
     protected abstract fun keyFunc(stack: MemoryStack): ByteBuffer
 
     fun writeInSingleTX(env: Long, dbi: Int) {
