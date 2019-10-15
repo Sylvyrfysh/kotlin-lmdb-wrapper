@@ -42,7 +42,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     /**
      * True if this object has been committed to the DB, or read from the DB.
      */
-    var committed: Boolean = false
+    var committed: Boolean
         private set
     private var isOnDBAddress: Boolean
 
@@ -55,16 +55,17 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
                 initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
                 dataInts.put(0, maxBufferSize - SIZE_MARKER_SIZE)
                 isOnDBAddress = false
+                committed = false
             }
             is ObjectBufferType.Buffer -> {
                 initBuffers(from.buffer)
                 isOnDBAddress = false
+                committed = false
             }
             is ObjectBufferType.DBRead -> {
                 initBuffers(from.buffer)
                 isOnDBAddress = true
                 committed = true
-                TODO()
             }
         }
     }
