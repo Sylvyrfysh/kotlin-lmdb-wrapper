@@ -1,61 +1,57 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Test
-import org.junit.rules.ExpectedException
-import org.junit.Rule
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class LMDBTypeTester {
-    @get:Rule
-    var thrown: ExpectedException = ExpectedException.none()
-
     @Test
     fun `Align greater than 0`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("Align must be a positive power of two!")
-
-        LMDBType(Any::class.java, 0, true, 1)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 0, true, 1)
+        }
+        assertEquals("Align must be a positive power of two!", except.message)
     }
 
     @Test
     fun `Align power of 2`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("Align must be a positive power of two!")
-
-        LMDBType(Any::class.java, 3, true, 1)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 3, true, 1)
+        }
+        assertEquals("Align must be a positive power of two!", except.message)
     }
 
     @Test
     fun `Non-const size needs align 1`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("Items that are not const-sized need an alignment of 1!")
-
-        LMDBType(Any::class.java, 2, false, 1)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 2, false, 1)
+        }
+        assertEquals("Items that are not const-sized need an alignment of 1!", except.message)
     }
 
     @Test
     fun `Non-const size max gt min`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("Items that are not const-sized need maxSize > minSize!")
-
-        LMDBType(Any::class.java, 1, false, 1, 2)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 1, false, 1, 2)
+        }
+        assertEquals("Items that are not const-sized need maxSize > minSize!", except.message)
     }
 
     @Test
     fun `Const size max eq min`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("Items that are const-sized need maxSize == minSize!")
-
-        LMDBType(Any::class.java, 1, true, 2, 1)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 1, true, 2, 1)
+        }
+        assertEquals("Items that are const-sized need maxSize == minSize!", except.message)
     }
 
     @Test
     fun `minSize gte align`() {
-        thrown.expect(IllegalArgumentException::class.java)
-        thrown.expectMessage("minSize must be >= align!")
-
-        LMDBType(Any::class.java, 4, true, 1, 1)
+        val except = assertThrows<IllegalArgumentException> {
+            LMDBType(Any::class.java, 4, true, 1, 1)
+        }
+        assertEquals("minSize must be >= align!", except.message)
     }
 
     @Test
