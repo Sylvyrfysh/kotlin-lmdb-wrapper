@@ -11,8 +11,6 @@ import java.io.Serializable
 import java.nio.*
 import kotlin.properties.ReadWriteProperty
 
-private const val SIZE_MARKER_SIZE = Int.SIZE_BYTES
-
 abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDBType<*>>, from: ObjectBufferType) {
     private lateinit var data: ByteBuffer
     private lateinit var dataShorts: ShortBuffer
@@ -53,7 +51,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         when (from) {
             is ObjectBufferType.New -> {
                 initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
-                dataInts.put(0, maxBufferSize - SIZE_MARKER_SIZE)
                 isOnDBAddress = false
                 committed = false
             }
