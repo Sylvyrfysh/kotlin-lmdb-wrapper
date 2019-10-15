@@ -12,7 +12,7 @@ import kotlin.properties.ReadWriteProperty
 
 private const val SIZE_MARKER_SIZE = Int.SIZE_BYTES
 
-abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*>>, from: ObjectBufferType) {
+abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDBType<*>>, from: ObjectBufferType) {
     private lateinit var data: ByteBuffer
     private lateinit var dataShorts: ShortBuffer
     private lateinit var dataChars: CharBuffer
@@ -23,6 +23,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
 
     private lateinit var types: Array<LMDBType<*>>
     private lateinit var varSizeTypes: Array<LMDBType<*>?>
+
+    private lateinit var nameToInts: Map<String, Int>
 
     private lateinit var offsets: IntArray
     private lateinit var constOffsets: IntArray
@@ -80,9 +82,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
         data.position(0)
     }
 
-    private fun setTypes(types: Array<LMDBType<*>>) {
-        require(types.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
-        this.types = types
+    private fun setTypes(mapTypes: Map<String, LMDBType<*>>) {
+        require(mapTypes.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
+        this.types = mapTypes.values.toTypedArray()
+        val tNameMap = HashMap<String, Int>()
+        mapTypes.keys.forEachIndexed { index, s ->
+            tNameMap[s] = index
+        }
+        this.nameToInts = tNameMap
         minBufferSize = types.map(LMDBType<*>::minSize).sum() + SIZE_MARKER_SIZE //data plus front size marker
         maxBufferSize = types.map(LMDBType<*>::maxSize).sum() + SIZE_MARKER_SIZE //data plus front size marker
         offsets = IntArray(types.size) { -1 }
@@ -203,27 +210,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
         return retArr
     }
 
-    /**
-     * TODO
-     *
-     * @param T The type of the variable
-     * @param index The index of the type passed in the constructor
-     * @param type The LMDBType of the variable
-     * @return A ReadWriteProperty that will properly delegate the object
-     */
-    protected fun <T> db(index: Int, type: LMDBType<T>): ReadWriteProperty<M, T> {
-        return when (type) {
-            LMDBType.LByte -> error("") //ByteRWP(index)
-            LMDBType.LBool -> BoolRWP(index)
-            LMDBType.LShort -> ShortRWP(index)
-            LMDBType.LChar -> CharRWP(index)
-            LMDBType.LInt -> IntRWP(index)
-            LMDBType.LFloat -> FloatRWP(index)
-            LMDBType.LLong -> LongRWP(index)
-            LMDBType.LDouble -> DoubleRWP(index)
-            else -> error("Type $type is not supported yet!")
-        }
-    }
+    protected val db = LMDBBaseObjectProvider(this)
 
     protected fun <T : Serializable> db(index: Int, type: T): ReadWriteProperty<M, T> {
         TODO()
@@ -358,6 +345,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
     }
 
     fun getInd(name: String): Int {
-        return -1
+        return nameToInts[name] ?: error("Name $name is not present")
     }
 }
