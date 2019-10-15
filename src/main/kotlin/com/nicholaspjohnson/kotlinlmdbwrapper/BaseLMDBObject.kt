@@ -110,8 +110,13 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             require(!type.isConstSize) { "Const-Sized types cannot have custom space allocated!" }
             require(varSizeDefault.min >= type.minSize) { "VarSizeDefault must be greater than or equal to the minimum size type!" }
             require(varSizeDefault.min <= type.maxSize) { "VarSizeDefault must be less than or equal to the maximum size type!" }
-            requestedExtraSize += (varSizeDefault.min - type.minSize)
-            minSizes[name] = varSizeDefault.min
+            if (type.clazz == String::class.java) { // need the size identifier before the varchar
+                requestedExtraSize += ((varSizeDefault.min + (2 * varSizeDefault.min.toLong().getVarLongSize())) - type.minSize)
+                minSizes[name] = varSizeDefault.min + (2 * varSizeDefault.min.toLong().getVarLongSize())
+            } else {
+                requestedExtraSize += (varSizeDefault.min - type.minSize)
+                minSizes[name] = varSizeDefault.min
+            }
         }
     }
 
