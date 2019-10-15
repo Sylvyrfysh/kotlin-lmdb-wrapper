@@ -49,7 +49,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
         setTypes(baseTypes)
         when (from) {
             is ObjectBufferType.New -> {
-                initBuffers(ByteBuffer.allocate(maxBufferSize))
+                initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
                 dataInts.put(0, maxBufferSize - SIZE_MARKER_SIZE)
                 isOnDBAddress = false
             }
@@ -68,6 +68,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
 
     private fun initBuffers(newData: ByteBuffer) {
         require(newData.capacity() >= minBufferSize)
+        require(newData.order() == ByteOrder.nativeOrder())
         data = newData
         data.position(4)
         dataShorts = data.asShortBuffer()
