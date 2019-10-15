@@ -235,12 +235,12 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         }
     }
 
-    abstract fun keyFunc(stack: MemoryStack): ByteBuffer
+    protected abstract fun keyFunc(stack: MemoryStack): ByteBuffer
 
     fun writeInSingleTX(env: Long, dbi: Int) {
         stackPush().use { stack ->
             val key = keyFunc(stack)
-            val kv = MDBVal.callocStack(stack).mv_data(key)
+            val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
 
             val dv = MDBVal.callocStack(stack).mv_size(maxBufferSize.toLong())
 
@@ -251,15 +251,30 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
 
             mdb_put(txn, dbi, kv, dv, MDB_RESERVE)
 
-            MemoryUtil.memCopy(data.position(0), dv.mv_data()!!)
+            dv.mv_data()!!.put(data.position(0))
             mdb_txn_commit(txn)
 
             committed = true
         }
     }
 
-    fun readFromDB(env: Long, dbi: Int): M {
-        TODO()
+    fun readFromDB(env: Long, dbi: Int) {
+        stackPush().use { stack ->
+            val key = keyFunc(stack)
+            val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
+
+            val pp = stack.mallocPointer(1)
+            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
+            val txn = pp.get(0)
+
+            val dv = MDBVal.callocStack()
+            LMDB_CHECK(mdb_get(txn, dbi, kv, dv))
+
+            println(dv.mv_size())
+            initBuffers(dv.mv_data()!!)
+            isOnDBAddress = true
+            mdb_txn_commit(txn)
+        }
     }
 
     fun getBool(index: Int): Boolean {
