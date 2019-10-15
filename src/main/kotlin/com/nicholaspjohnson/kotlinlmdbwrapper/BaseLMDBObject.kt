@@ -305,7 +305,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
 
             val pp = stack.mallocPointer(1)
-            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
+            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
             val txn = pp.get(0)
 
             val dv = MDBVal.callocStack()
