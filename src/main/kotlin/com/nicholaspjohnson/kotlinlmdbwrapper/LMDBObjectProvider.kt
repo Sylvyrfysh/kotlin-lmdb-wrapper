@@ -5,6 +5,28 @@ import kotlin.reflect.KProperty
 
 open class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMDBObject<M>) {
     operator fun provideDelegate(thisRef: M, prop: KProperty<*>): SpecialRWP<M> {
+        val lmdbType = when (prop.returnType.classifier) {
+            Boolean::class -> LMDBType.LBool
+            Byte::class -> LMDBType.LByte
+            Short::class -> LMDBType.LShort
+            Char::class -> LMDBType.LChar
+            Int::class -> LMDBType.LInt
+            Float::class -> LMDBType.LFloat
+            Long::class -> {
+                if (prop.annotations.filterIsInstance<VarLong>().isNotEmpty()) {
+                    LMDBType.LVarLong
+                } else {
+                    LMDBType.LLong
+                }
+            }
+            Double::class -> LMDBType.LDouble
+            String::class -> {
+                val maxL = (prop.annotations.filterIsInstance<VarChar>().firstOrNull() ?: error("Strings must have the VarChar annotation")).maxLength
+                LMDBType.LVarChar(maxL)
+            }
+            else -> error("New type no impl ${prop.returnType}")
+        }
+        obj.addType(prop.name, lmdbType)
         return when (prop.returnType.classifier) {
             Boolean::class -> BoolRWP(obj, prop.name)
             Byte::class -> ByteRWP(obj, prop.name)
@@ -13,7 +35,7 @@ open class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMD
             Int::class -> IntRWP(obj, prop.name)
             Float::class -> FloatRWP(obj, prop.name)
             Long::class -> {
-                return if (prop.annotations.filterIsInstance<VarLong>().isNotEmpty()) {
+                if (prop.annotations.filterIsInstance<VarLong>().isNotEmpty()) {
                     TODO("VarLong is not yet implemented!")
                 } else {
                     LongRWP(obj, prop.name)

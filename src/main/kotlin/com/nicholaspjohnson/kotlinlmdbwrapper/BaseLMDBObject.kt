@@ -11,7 +11,7 @@ import java.io.Serializable
 import java.nio.*
 import kotlin.properties.ReadWriteProperty
 
-abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDBType<*>>, from: ObjectBufferType) {
+abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var data: ByteBuffer
     private lateinit var dataShorts: ShortBuffer
     private lateinit var dataChars: CharBuffer
@@ -43,33 +43,51 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     var committed: Boolean
         private set
     private var isOnDBAddress: Boolean
+    private var firstBuf: ByteBuffer?
+    private var isInit = false
 
     private val preferredOrder = LMDBType.run { listOf(LLong, LDouble, LInt, LFloat, LShort, LChar, LByte, LBool) }
 
     init {
-        setTypes(baseTypes)
         when (from) {
             is ObjectBufferType.New -> {
-                initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
+                firstBuf = null
                 isOnDBAddress = false
                 committed = false
             }
             is ObjectBufferType.Buffer -> {
-                initBuffers(from.buffer)
+                checkBuffer(from.buffer)
+                firstBuf = from.buffer
                 isOnDBAddress = false
                 committed = false
             }
             is ObjectBufferType.DBRead -> {
-                initBuffers(from.buffer)
+                checkBuffer(from.buffer)
+                firstBuf = from.buffer
                 isOnDBAddress = true
                 committed = true
             }
         }
     }
 
+    private fun setUsed() {
+        setTypes()
+        if (firstBuf == null) { // create new
+            initBuffers(ByteBuffer.allocate(maxBufferSize).order(ByteOrder.nativeOrder()))
+        } else {
+            initBuffers(firstBuf!!)
+        }
+        firstBuf = null
+        isInit = true
+    }
+
+    private fun checkBuffer(buffer: ByteBuffer) {
+        require(buffer.capacity() >= minBufferSize) { "Provided buffers must have at least minBufferSize capacity!" }
+        require(buffer.order() == ByteOrder.nativeOrder()) { "The buffer order must be equal to ByteOrder.nativeOrder()!" }
+    }
+
     private fun initBuffers(newData: ByteBuffer) {
-        require(newData.capacity() >= minBufferSize) { "Provided buffers must have at least minBufferSize capacity!" }
-        require(newData.order() == ByteOrder.nativeOrder()) { "The buffer order must be equal to ByteOrder.nativeOrder()!" }
+        checkBuffer(newData)
         data = newData
         dataShorts = data.asShortBuffer()
         dataChars = data.asCharBuffer()
@@ -79,8 +97,16 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         dataDoubles = data.asDoubleBuffer()
     }
 
-    private fun setTypes(mapTypes: Map<String, LMDBType<*>>) {
-        require(mapTypes.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
+    private val haveTypes = HashMap<String, LMDBType<*>>()
+    fun addType(name: String, type: LMDBType<*>) {
+        require(!haveTypes.containsKey(name)) { "Cannot have the same name twice!" }
+        require(!isInit) { "Cannot add new DB items after first access!" }
+        haveTypes[name] = type
+    }
+
+    private fun setTypes() {
+        require(haveTypes.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
+        val mapTypes = haveTypes.toSortedMap()
         this.types = mapTypes.values.toTypedArray()
         val tNameMap = HashMap<String, Int>()
         mapTypes.keys.forEachIndexed { index, s ->
@@ -388,6 +414,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun getInd(name: String): Int {
+        if (!isInit) {
+            setUsed()
+        }
         return nameToInts[name] ?: error("Name $name is not present")
     }
 }
