@@ -72,14 +72,12 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         require(newData.capacity() >= minBufferSize)
         require(newData.order() == ByteOrder.nativeOrder())
         data = newData
-        data.position(SIZE_MARKER_SIZE)
         dataShorts = data.asShortBuffer()
         dataChars = data.asCharBuffer()
         dataInts = data.asIntBuffer()
         dataLongs = data.asLongBuffer()
         dataFloats = data.asFloatBuffer()
         dataDoubles = data.asDoubleBuffer()
-        data.position(0)
     }
 
     private fun setTypes(mapTypes: Map<String, LMDBType<*>>) {
@@ -90,8 +88,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
             tNameMap[s] = index
         }
         this.nameToInts = tNameMap
-        minBufferSize = types.map(LMDBType<*>::minSize).sum() + SIZE_MARKER_SIZE //data plus front size marker
-        maxBufferSize = types.map(LMDBType<*>::maxSize).sum() + SIZE_MARKER_SIZE //data plus front size marker
+        minBufferSize = types.map(LMDBType<*>::minSize).sum()
+        maxBufferSize = types.map(LMDBType<*>::maxSize).sum()
         offsets = IntArray(types.size) { -1 }
         sizes = IntArray(types.size) { -1 }
         constOffsets = IntArray(types.size) { -1 }
@@ -278,20 +276,20 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     fun getBool(index: Int): Boolean {
-        return data[SIZE_MARKER_SIZE + offsets[index]] != 0.toByte()
+        return data[offsets[index]] != 0.toByte()
     }
 
     fun setBool(index: Int, value: Boolean) {
-        data.put(SIZE_MARKER_SIZE + offsets[index], if (value) 1.toByte() else 0.toByte())
+        data.put(offsets[index], if (value) 1.toByte() else 0.toByte())
         committed = false
     }
 
     fun getByte(index: Int): Byte {
-        return data[SIZE_MARKER_SIZE + offsets[index]]
+        return data[offsets[index]]
     }
 
     fun setByte(index: Int, value: Byte) {
-        data.put(SIZE_MARKER_SIZE + offsets[index], value)
+        data.put(offsets[index], value)
         committed = false
     }
 
