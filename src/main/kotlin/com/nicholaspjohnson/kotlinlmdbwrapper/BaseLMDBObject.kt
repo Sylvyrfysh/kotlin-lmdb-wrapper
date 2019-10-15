@@ -70,7 +70,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
         require(newData.capacity() >= minBufferSize)
         require(newData.order() == ByteOrder.nativeOrder())
         data = newData
-        data.position(4)
+        data.position(SIZE_MARKER_SIZE)
         dataShorts = data.asShortBuffer()
         dataChars = data.asCharBuffer()
         dataInts = data.asIntBuffer()
@@ -276,20 +276,20 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Array<LMDBType<*
     }
 
     fun getBool(index: Int): Boolean {
-        return data[offsets[index]] != 0.toByte()
+        return data[SIZE_MARKER_SIZE + offsets[index]] != 0.toByte()
     }
 
     fun setBool(index: Int, value: Boolean) {
-        data.put(offsets[index], if (value) 1.toByte() else 0.toByte())
+        data.put(SIZE_MARKER_SIZE + offsets[index], if (value) 1.toByte() else 0.toByte())
         committed = false
     }
 
     fun getByte(index: Int): Byte {
-        return data[offsets[index]]
+        return data[SIZE_MARKER_SIZE + offsets[index]]
     }
 
     fun setByte(index: Int, value: Byte) {
-        data.put(offsets[index], value)
+        data.put(SIZE_MARKER_SIZE + offsets[index], value)
         committed = false
     }
 
