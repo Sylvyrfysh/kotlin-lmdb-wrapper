@@ -12,7 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 object BasicDBTester {
-    private val isCI = System.getenv("CI") == "true"
+    private val isCI = System.getenv("CI") != null
 
     private var env: Long = 0L
     private var dbi: Int = 0
