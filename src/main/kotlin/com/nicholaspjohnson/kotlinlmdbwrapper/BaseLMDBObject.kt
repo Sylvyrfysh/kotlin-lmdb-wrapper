@@ -335,7 +335,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setBool(index: Int, value: Boolean) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         data.put(offsets[index], if (value) 1.toByte() else 0.toByte())
         committed = false
@@ -347,7 +347,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setByte(index: Int, value: Byte) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         data.put(offsets[index], value)
         committed = false
@@ -359,7 +359,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setShort(index: Int, value: Short) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataShorts.put(offsets[index], value)
         committed = false
@@ -371,7 +371,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setChar(index: Int, value: Char) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataChars.put(offsets[index], value)
         committed = false
@@ -383,7 +383,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setInt(index: Int, value: Int) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataInts.put(offsets[index], value)
         committed = false
@@ -395,7 +395,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setFloat(index: Int, value: Float) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataFloats.put(offsets[index], value)
         committed = false
@@ -407,7 +407,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setLong(index: Int, value: Long) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataLongs.put(offsets[index], value)
         committed = false
@@ -419,7 +419,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setDouble(index: Int, value: Double) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         dataDoubles.put(offsets[index], value)
         committed = false
@@ -427,7 +427,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     fun setVarLong(index: Int, value: Long) {
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         calculateVarSizeOffsets(index, value.getVarLongSize())
         data.writeVarLong(offsets[index], value)
@@ -444,7 +444,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         val fullSize = memUTF8Len + (2 * memUTF8Len.toLong().getVarLongSize())
         require(fullSize <= types[index].maxSize) { "Item exceeds VarChar size!" }
         if (isOnDBAddress) {
-            TODO()
+            moveFromDBAddress()
         }
         calculateVarSizeOffsets(index, fullSize)
         val diskSizeLen = sizes[index].toLong().getVarLongSize()
@@ -476,6 +476,13 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 MemoryUtil.memUTF8(dirBuf, currentSize.toInt())
             }
         }
+    }
+
+    fun moveFromDBAddress() {
+        initBuffers(ByteBuffer.allocate(data.capacity())
+            .order(ByteOrder.nativeOrder())
+            .put(data)
+            .position(0))
     }
 
     fun getInd(name: String): Int {
