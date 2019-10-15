@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -11,6 +12,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 object BasicDBTester {
+    private val isCI = System.getenv("CI") == "true"
+
     private var env: Long = 0L
     private var dbi: Int = 0
     private val testObj1 = TestObj(ObjectBufferType.New)
@@ -21,6 +24,7 @@ object BasicDBTester {
     @BeforeAll
     @JvmStatic
     fun `Set Up`() {
+        assumeTrue(!isCI)
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(LMDB.mdb_env_create(pp))
