@@ -40,13 +40,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private var maxAlign: Int = -1
 
     /**
-     * True if this object has been committed to the DB, or read from the DB.
+     * True if this object has been committed to the DB, or read from the DB and not modified.
      */
     var committed: Boolean
         private set
     private var isOnDBAddress: Boolean
     private var firstBuf: ByteBuffer?
     private var isInit = false
+    private var hasVarSizeItems = false
 
     private val preferredOrder = LMDBType.run { listOf(LLong, LDouble, LInt, LFloat, LShort, LChar, LByte, LBool) }
 
@@ -98,6 +99,25 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         dataLongs = data.asLongBuffer()
         dataFloats = data.asFloatBuffer()
         dataDoubles = data.asDoubleBuffer()
+        if (isOnDBAddress && hasVarSizeItems) {
+            // Read from the DB- Recalculate our offsets
+            var pushForward = 0
+            for ((index, t) in varSizeTypes.withIndex()) {
+                if (t == null) {
+                    continue
+                }
+
+                val normalSize = minSizes.getOrDefault(intsToName.getValue(index), t.minSize)
+                val currentSize = normalSize.coerceAtLeast(t.getItemSizeFromDB(data, offsets[index] + pushForward))
+                if (pushForward > 0) {
+                    offsets[index] += pushForward
+                }
+                sizes[index] = currentSize
+                if (currentSize > normalSize) {
+                    pushForward += (currentSize - normalSize)
+                }
+            }
+        }
     }
 
     private val haveTypes = HashMap<String, LMDBType<*>>()
@@ -192,6 +212,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                         continue
                     }
 
+                    hasVarSizeItems = true
                     val size = minSizes.getOrDefault(intsToName.getValue(index), t.minSize)
                     offsets[index] = byteOffset
                     sizes[index] = size
@@ -288,7 +309,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val key = keyFunc(stack)
             val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
 
-            val dv = MDBVal.callocStack(stack).mv_size(maxBufferSize.toLong())
+            val dv = MDBVal.callocStack(stack).mv_size(data.capacity().toLong())
 
             val pp = stack.mallocPointer(1)
 
@@ -322,8 +343,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 LMDB_CHECK(err)
             }
 
-            initBuffers(dv.mv_data()!!)
             isOnDBAddress = true
+            initBuffers(dv.mv_data()!!)
             mdb_txn_commit(txn)
         }
     }

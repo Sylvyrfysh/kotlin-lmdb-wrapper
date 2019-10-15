@@ -44,7 +44,7 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         val LVarLong = object : LMDBType<Long>(Long::class.java, 1, false, 10, 1) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
                 var size = 0
-                while (data[startPoint + size] >= 128.toByte()) {
+                while (data[startPoint + size].toInt() and 0x80 == 0x80) {
                     ++size
                 }
                 return size + 1
