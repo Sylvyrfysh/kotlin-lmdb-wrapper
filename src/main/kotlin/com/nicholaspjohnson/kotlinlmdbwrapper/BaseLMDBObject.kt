@@ -91,6 +91,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private fun initBuffers(newData: ByteBuffer) {
         checkBuffer(newData)
         data = newData
+        data.position(0)
         dataShorts = data.asShortBuffer()
         dataChars = data.asCharBuffer()
         dataInts = data.asIntBuffer()
