@@ -69,8 +69,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
     }
 
     private fun initBuffers(newData: ByteBuffer) {
-        require(newData.capacity() >= minBufferSize)
-        require(newData.order() == ByteOrder.nativeOrder())
+        require(newData.capacity() >= minBufferSize) { "Provided buffers must have at least minBufferSize capacity!" }
+        require(newData.order() == ByteOrder.nativeOrder()) { "The buffer order must be equal to ByteOrder.nativeOrder()!" }
         data = newData
         dataShorts = data.asShortBuffer()
         dataChars = data.asCharBuffer()
@@ -157,7 +157,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(baseTypes: Map<String, LMDB
         }
 
         varSizeTypes = remainingTypes
-        println(offsets.contentToString())
     }
 
     private fun calculateVarSizeOffsets(changedIdx: Int, newSize: Int) {
