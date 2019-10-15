@@ -1,5 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
+import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -59,7 +60,7 @@ object BasicDBTester {
     @Test
     fun `Test NonExistent Key throws Exception`() {
         val testObj2 = TestObj(ObjectBufferType.New)
-        testObj2.key = nextID
+        testObj2.key = Integer.MIN_VALUE
         val except = assertThrows<DataNotFoundException> {
             testObj2.readFromDB(env, dbi)
         }
