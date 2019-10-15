@@ -295,10 +295,16 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
             val txn = pp.get(0)
 
-            mdb_put(txn, dbi, kv, dv, MDB_RESERVE)
+            try {
+                LMDB_CHECK(mdb_put(txn, dbi, kv, dv, MDB_RESERVE))
 
-            dv.mv_data()!!.put(data.position(0))
-            mdb_txn_commit(txn)
+                dv.mv_data()!!.put(data.position(0))
+
+                LMDB_CHECK(mdb_txn_commit(txn))
+            } catch (t: Throwable) {
+                mdb_txn_abort(txn)
+                throw t
+            }
 
             committed = true
         }
@@ -317,15 +323,21 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val dv = MDBVal.callocStack()
             val err = mdb_get(txn, dbi, kv, dv)
             if (err == MDB_NOTFOUND) {
+                mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
             } else {
-                LMDB_CHECK(err)
+                try {
+                    LMDB_CHECK(err)
+                } catch (t: Throwable) {
+                    mdb_txn_abort(txn)
+                    throw t
+                }
             }
 
             isOnDBAddress = true
             justReadFromDB = true
             initBuffers(dv.mv_data()!!)
-            mdb_txn_commit(txn)
+            mdb_txn_abort(txn)
         }
     }
 
