@@ -274,17 +274,22 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val newBuffer = data.capacity() < ((newSize - sizes[changedIdx]) + sizes.sum())
             val writeBuf =
                 if (newBuffer) {
-                    ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum())
+                    val x = ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum())
                         .order(ByteOrder.nativeOrder())
                         .put(data)
-                        .position(0)
+                    x.position(0)
+                    x
                 } else {
                     data
                 }
             for (i in newOffsets.toList().withIndex().filterNot { it.value == offsets[it.index] }.sortedByDescending { it.value }) {
                 val dCpy = ByteArray(sizes[i.index])
-                data.position(offsets[i.index]).get(dCpy)
-                writeBuf.position(i.value).put(dCpy)
+                data.position(offsets[i.index])
+                data.get(dCpy)
+                data.position(0)
+                writeBuf.position(i.value)
+                writeBuf.put(dCpy)
+                writeBuf.position(0)
             }
             if (newBuffer) {
                 initBuffers(writeBuf)
@@ -299,7 +304,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      */
     fun getAllAsByteArray(): ByteArray {
         val retArr = ByteArray(data.capacity())
-        data.position(0).get(retArr)
+        data.position(0)
+        data.get(retArr)
         return retArr
     }
 
@@ -321,7 +327,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     fun writeInSingleTX(env: Long, dbi: Int) {
         stackPush().use { stack ->
             val key = keyFunc(stack)
-            val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
+            key.position(0)
+            val kv = MDBVal.callocStack(stack).mv_data(key)
 
             val dv = MDBVal.callocStack(stack).mv_size(data.capacity().toLong())
 
@@ -333,7 +340,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             try {
                 LMDB_CHECK(mdb_put(txn, dbi, kv, dv, MDB_RESERVE))
 
-                dv.mv_data()!!.put(data.position(0))
+                data.position(0)
+                dv.mv_data()!!.put(data)
 
                 LMDB_CHECK(mdb_txn_commit(txn))
             } catch (t: Throwable) {
@@ -353,7 +361,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     fun readFromDB(env: Long, dbi: Int) {
         stackPush().use { stack ->
             val key = keyFunc(stack)
-            val kv = MDBVal.callocStack(stack).mv_data(key.position(0))
+            key.position(0)
+            val kv = MDBVal.callocStack(stack).mv_data(key)
 
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
@@ -503,7 +512,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         data.writeVarLong(offsets[index], diskSize)
         val currentSizeLen = memUTF8Len.toLong().getVarLongSize()
         data.writeVarLong(offsets[index] + diskSizeLen, memUTF8Len.toLong())
-        data.position(offsets[index] + diskSizeLen + currentSizeLen).put(utf8Data.position(0)).position(0)
+        data.position(offsets[index] + diskSizeLen + currentSizeLen)
+        utf8Data.position(0)
+        data.put(utf8Data)
+        data.position(0)
 
         committed = false
     }
@@ -520,7 +532,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             stackPush().use { stack ->
                 val dirBuf = stack.malloc(currentSize.toInt())
                 val oldLimit = data.limit()
-                dirBuf.put(data.limit(offsets[index] + diskSizeLen + currentSize.getVarLongSize() + currentSize.toInt()).position(offsets[index] + diskSizeLen + currentSize.getVarLongSize()))
+                data.limit(offsets[index] + diskSizeLen + currentSize.getVarLongSize() + currentSize.toInt()).position(offsets[index] + diskSizeLen + currentSize.getVarLongSize())
+                dirBuf.put(data)
                 data.position(0).limit(oldLimit)
 
                 dirBuf.position(0)
@@ -531,10 +544,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     private fun moveFromDBAddress() {
         require(isOnDBAddress) { "Cannot move off of DB Address if we're not on it!" }
-        initBuffers(ByteBuffer.allocate(data.capacity())
+        val x = ByteBuffer.allocate(data.capacity())
             .order(ByteOrder.nativeOrder())
             .put(data)
-            .position(0))
+        x.position(0)
+        initBuffers(x)
         isOnDBAddress = false
     }
 
