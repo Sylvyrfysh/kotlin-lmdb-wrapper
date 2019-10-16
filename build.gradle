@@ -23,8 +23,7 @@ repositories {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-
-    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+    implementation "org.jetbrains.kotlin:kotlin-reflect"
 
     switch (OperatingSystem.current()) {
         case OperatingSystem.LINUX:
@@ -41,13 +40,13 @@ dependencies {
             break
     }
 
-    implementation "org.lwjgl:lwjgl"
+    api platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+    api "org.lwjgl:lwjgl"
+    api "org.lwjgl:lwjgl-lmdb"
     implementation "org.lwjgl:lwjgl-jemalloc"
-    implementation "org.lwjgl:lwjgl-lmdb"
-    runtimeClasspath "org.lwjgl:lwjgl::$lwjglNatives"
-    runtimeClasspath "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
-    runtimeClasspath "org.lwjgl:lwjgl-lmdb::$lwjglNatives"
-    compile "org.jetbrains.kotlin:kotlin-reflect:1.3.50"
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-lmdb::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
