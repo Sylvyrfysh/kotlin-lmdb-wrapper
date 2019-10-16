@@ -41,10 +41,11 @@ dependencies {
     }
 
     implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
-    api "org.lwjgl:lwjgl"
-    api "org.lwjgl:lwjgl-lmdb"
+    implementation "org.lwjgl:lwjgl"
+    implementation "org.lwjgl:lwjgl-lmdb"
     implementation "org.lwjgl:lwjgl-jemalloc"
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeClasspath "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-lmdb::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
 
