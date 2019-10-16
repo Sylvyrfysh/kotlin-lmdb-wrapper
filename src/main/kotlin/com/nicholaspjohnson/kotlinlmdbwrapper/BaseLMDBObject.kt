@@ -1,16 +1,20 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.ByteTypedRWP
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.ShortTypedRWP
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB.*
 import org.lwjgl.util.lmdb.MDBVal
-import java.io.Serializable
 import java.nio.*
-import kotlin.properties.ReadWriteProperty
 
+/**
+ * A basic LMDBObject that is of the class [M] which extends [BaseLMDBObject].
+ *
+ * @constructor
+ * Initialize the buffers and update the offsets
+ *
+ * @param[from] The way to create this object
+ */
 abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var data: ByteBuffer
     private lateinit var dataShorts: ShortBuffer
@@ -31,8 +35,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var sizes: IntArray
     private lateinit var constSizes: IntArray
 
+    /**
+     * The minimum buffer size [M] will ever need.
+     */
     var minBufferSize: Int = -1
         private set
+    /**
+     * The maximum buffer size [M] will ever need.
+     */
     var maxBufferSize: Int = -1
         private set
     private var constSizeSetSize: Int = -1
@@ -77,7 +87,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private fun setUsed() {
         setTypes()
         if (firstBuf == null) { // create new
-            initBuffers(ByteBuffer.allocate(minBufferSize + requestedExtraSize).order(ByteOrder.nativeOrder()))
+            initBuffers(ByteBuffer.allocate(minBufferSize).order(ByteOrder.nativeOrder()))
         } else {
             initBuffers(firstBuf!!)
         }
@@ -124,20 +134,25 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     private val haveTypes = HashMap<String, LMDBType<*>>()
     private val minSizes = HashMap<String, Int>()
+
+    /**
+     * Adds an object to this object with the name [name] and [LMDBType] [type].
+     * If it is a variably sized attribute and annotated with [VarSizeDefault], this will put a custom minimum size on the object.
+     */
     fun addType(name: String, type: LMDBType<*>, varSizeDefault: VarSizeDefault? = null) {
         require(!haveTypes.containsKey(name)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
         haveTypes[name] = type
         if(varSizeDefault != null) {
             require(!type.isConstSize) { "Const-Sized types cannot have custom space allocated!" }
-            require(varSizeDefault.min >= type.minSize) { "VarSizeDefault must be greater than or equal to the minimum size type!" }
-            require(varSizeDefault.min <= type.maxSize) { "VarSizeDefault must be less than or equal to the maximum size type!" }
+            require(varSizeDefault.minimumSize >= type.minSize) { "VarSizeDefault must be greater than or equal to the minimum size type!" }
+            require(varSizeDefault.minimumSize <= type.maxSize) { "VarSizeDefault must be less than or equal to the maximum size type!" }
             if (type.clazz == String::class.java) { // need the size identifier before the varchar
-                requestedExtraSize += ((varSizeDefault.min + (2 * varSizeDefault.min.toLong().getVarLongSize())) - type.minSize)
-                minSizes[name] = varSizeDefault.min + (2 * varSizeDefault.min.toLong().getVarLongSize())
+                requestedExtraSize += ((varSizeDefault.minimumSize + (2 * varSizeDefault.minimumSize.toLong().getVarLongSize())) - type.minSize)
+                minSizes[name] = varSizeDefault.minimumSize + (2 * varSizeDefault.minimumSize.toLong().getVarLongSize())
             } else {
-                requestedExtraSize += (varSizeDefault.min - type.minSize)
-                minSizes[name] = varSizeDefault.min
+                requestedExtraSize += (varSizeDefault.minimumSize - type.minSize)
+                minSizes[name] = varSizeDefault.minimumSize
             }
         }
     }
@@ -152,7 +167,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
         this.nameToInts = tNameMap
         this.intsToName = tNameMap.map { Pair(it.value, it.key) }.toMap()
-        minBufferSize = types.map(LMDBType<*>::minSize).sum()
+        minBufferSize = types.map(LMDBType<*>::minSize).sum() + requestedExtraSize
         maxBufferSize = types.map(LMDBType<*>::maxSize).sum()
         offsets = IntArray(types.size) { -1 }
         sizes = IntArray(types.size) { -1 }
@@ -273,16 +288,30 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         sizes[changedIdx] = newSize
     }
 
+    /**
+     * Returns a [ByteArray] that contains a copy of the data in this object
+     */
     fun getAllAsByteArray(): ByteArray {
         val retArr = ByteArray(data.capacity())
         data.position(0).get(retArr)
         return retArr
     }
 
+    /**
+     * Wrapper for assigning ibjects based on type and annotation
+     */
     protected val db = LMDBBaseObjectProvider(this)
 
+    /**
+     * Returns a 4 byte long key that is used in int-keyed databases.
+     * Can use [stack] to directly allocate the data quickly.
+     */
     protected abstract fun keyFunc(stack: MemoryStack): ByteBuffer
 
+    /**
+     * Writes only this object into the [dbi] of [env].
+     * The key will be the return of [keyFunc].
+     */
     fun writeInSingleTX(env: Long, dbi: Int) {
         stackPush().use { stack ->
             val key = keyFunc(stack)
@@ -310,6 +339,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
+    /**
+     * Based on the key provided by [keyFunc], attempts to load all of the other data members.
+     * If the key does not exist, a [DataNotFoundException] will be thrown.
+     */
     @Throws(DataNotFoundException::class)
     fun readFromDB(env: Long, dbi: Int) {
         stackPush().use { stack ->
@@ -490,13 +523,19 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
-    fun moveFromDBAddress() {
+    private fun moveFromDBAddress() {
+        require(isOnDBAddress) { "Cannot move off of DB Address if we're not on it!" }
         initBuffers(ByteBuffer.allocate(data.capacity())
             .order(ByteOrder.nativeOrder())
             .put(data)
             .position(0))
+        isOnDBAddress = false
     }
 
+    /**
+     * Helper function to turn [name] into the underlying index for a property.
+     * Returns the index [name] is at.
+     */
     fun getInd(name: String): Int {
         if (!isInit) {
             setUsed()

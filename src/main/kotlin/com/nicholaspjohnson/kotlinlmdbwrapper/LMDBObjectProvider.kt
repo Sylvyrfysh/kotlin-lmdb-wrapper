@@ -3,8 +3,18 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
 import kotlin.reflect.KProperty
 
-open class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMDBObject<M>) {
-    operator fun provideDelegate(thisRef: M, prop: KProperty<*>): SpecialRWP<M> {
+/**
+ * Returns objects for the class of type [M].
+ *
+ * @constructor
+ * Takes in the class to provide for.
+ */
+class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMDBObject<M>) {
+    /**
+     * Provides a delegate for the class instance [thisRef]'s property [prop].
+     * Returns a RWPInterface with the right getters and setters.
+     */
+    operator fun provideDelegate(thisRef: M, prop: KProperty<*>): RWPInterface<M> {
         val lmdbType = when (prop.returnType.classifier) {
             Boolean::class -> LMDBType.LBool
             Byte::class -> LMDBType.LByte

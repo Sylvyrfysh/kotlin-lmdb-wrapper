@@ -24,22 +24,49 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         require(minSize >= align) { "minSize must be >= align!" }
     }
     companion object {
+        /**
+         * A basic [LMDBType] for [Boolean]s
+         */
         @JvmField
         val LBool = object: LMDBType<Boolean>(Boolean::class.java, 1, true, 1) {}
+        /**
+         * A basic [LMDBType] for [Byte]s
+         */
         @JvmField
         val LByte = object : LMDBType<Byte>(Byte::class.java, 1, true, 1) {}
+        /**
+         * A basic [LMDBType] for [Char]s
+         */
         @JvmField
         val LChar = object : LMDBType<Char>(Char::class.java, 2, true, 2) {}
+        /**
+         * A basic [LMDBType] for [Short]s
+         */
         @JvmField
         val LShort = object : LMDBType<Short>(Short::class.java, 2, true, 2) {}
+        /**
+         * A basic [LMDBType] for [Int]s
+         */
         @JvmField
         val LInt = object : LMDBType<Int>(Int::class.java, 4, true, 4) {}
+        /**
+         * A basic [LMDBType] for [Float]s
+         */
         @JvmField
         val LFloat = object : LMDBType<Float>(Float::class.java, 4, true, 4) {}
+        /**
+         * A basic [LMDBType] for [Long]s
+         */
         @JvmField
         val LLong = object : LMDBType<Long>(Long::class.java, 8, true, 8) {}
+        /**
+         * A basic [LMDBType] for [Double]s
+         */
         @JvmField
         val LDouble = object : LMDBType<Double>(Double::class.java, 8, true, 8) {}
+        /**
+         * A basic [LMDBType] for [Long]s that will internally be stored as a VarLong
+         */
         @JvmField
         val LVarLong = object : LMDBType<Long>(Long::class.java, 1, false, 10, 1) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
@@ -53,6 +80,9 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
             override fun getItemSizeFromPlain(item: Long) = item.getVarLongSize()
         }
 
+        /**
+         * Creates a new [LMDBType] for [String]s of max size [maxSize]
+         */
         @JvmStatic
         fun LVarChar(maxSize: Int): LMDBType<String> = object : LMDBType<String>(String::class.java, 1, false, maxSize + (2 * maxSize.toLong().getVarLongSize()), LVarLong.minSize) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
@@ -72,9 +102,6 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
                 return diskSizeLen + dataLenLen + item.length
             }
         }
-        @JvmStatic
-        fun LFixedArray(size: Int): LMDBType<ByteArray> =
-            LMDBType(ByteArray::class.java, 1, true, size)
     }
 
     /**
@@ -105,6 +132,9 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         error("Variable sized items must override this function!")
     }
 
+    /**
+     * Custom check for detecting if we equal [other]
+     */
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LMDBType<*>) return false
@@ -118,6 +148,9 @@ open class LMDBType<T>(val clazz: Class<T>, val align: Int, val isConstSize: Boo
         return true
     }
 
+    /**
+     * Custom hashCode
+     */
     override fun hashCode(): Int {
         var result = clazz.hashCode()
         result = 31 * result + align

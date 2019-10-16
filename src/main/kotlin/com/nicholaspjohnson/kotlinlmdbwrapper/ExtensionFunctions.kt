@@ -5,6 +5,9 @@ import org.lwjgl.util.lmdb.LMDB.mdb_strerror
 import org.lwjgl.util.lmdb.LMDB.MDB_SUCCESS
 import kotlin.experimental.and
 
+/**
+ * Reads and returns a [Long] that has been stored as a VarLong in this buffer starting at [startPoint].
+ */
 fun ByteBuffer.readVarLong(startPoint: Int): Long {
     var idx = 0
     var ret = 0L
@@ -14,6 +17,9 @@ fun ByteBuffer.readVarLong(startPoint: Int): Long {
     return ret
 }
 
+/**
+ * Writes the [Long] value [data] to this buffer starting at [startPoint].
+ */
 fun ByteBuffer.writeVarLong(startPoint: Int, data: Long) {
     var idx = 0
     var rem = data
@@ -25,6 +31,9 @@ fun ByteBuffer.writeVarLong(startPoint: Int, data: Long) {
     } while (hasMore)
 }
 
+/**
+ * Returns the number of bytes long this [Long] is as a VarLong.
+ */
 fun Long.getVarLongSize(): Int {
     var idx = 0
     var rem = this
@@ -36,6 +45,10 @@ fun Long.getVarLongSize(): Int {
     return idx
 }
 
+/**
+ * Checks that [rc] is a success code, otherwise throws a [IllegalArgumentException]
+ */
+@Throws(IllegalArgumentException::class)
 fun LMDB_CHECK(rc: Int) {
     check(rc == MDB_SUCCESS) { mdb_strerror(rc) }
 }

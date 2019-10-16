@@ -3,8 +3,14 @@ package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import kotlin.reflect.KProperty
 
-class FloatRWP<M: BaseLMDBObject<M>>(private val obj: BaseLMDBObject<M>, private val name: String) : SpecialRWP<M> {
-    private val index by lazy { obj.getInd(name) }
+/**
+ * A default [Float] RWP that will act on instances of the class [M]
+ *
+ * @constructor
+ *
+ * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP]
+ */
+class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
         thisRef.setFloat(index, value as Float)
     }
