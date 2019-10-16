@@ -47,7 +47,9 @@ dependencies {
     runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeClasspath "org.lwjgl:lwjgl::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-lmdb::$lwjglNatives"
+    runtimeClasspath "org.lwjgl:lwjgl-lmdb::$lwjglNatives"
     runtimeOnly "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
+    runtimeClasspath "org.lwjgl:lwjgl-jemalloc::$lwjglNatives"
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
