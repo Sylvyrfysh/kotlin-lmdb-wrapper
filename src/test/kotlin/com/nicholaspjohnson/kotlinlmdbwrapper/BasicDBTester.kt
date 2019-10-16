@@ -86,6 +86,11 @@ object BasicDBTester {
         assertEquals(9012, testObj3.data)
     }
 
+    @Test
+    fun `Test Simple Object Size`() {
+        assertEquals(8, testObj1.size)
+    }
+
     class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
         override fun keyFunc(stack: MemoryStack): ByteBuffer {
             return stack.malloc(4).putInt(0, key)

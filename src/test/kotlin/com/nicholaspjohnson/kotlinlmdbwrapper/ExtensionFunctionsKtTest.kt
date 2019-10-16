@@ -7,7 +7,21 @@ import java.nio.ByteBuffer
 
 class ExtensionFunctionsKtTest {
     @Test
-    fun readVarLong() {
+    fun `Test VarLong read 127`() {
+        val buffer = ByteBuffer.wrap(byteArrayOf(0x7F.toByte()))
+        assertEquals(127, buffer.readVarLong(0))
+    }
+
+    @Test
+    fun `Test VarLong read 128`() {
+        val buffer = ByteBuffer.wrap(byteArrayOf(0x80.toByte(), 0x01.toByte()))
+        assertEquals(128, buffer.readVarLong(0))
+    }
+
+    @Test
+    fun `Test VarLong read 143`() {
+        val buffer = ByteBuffer.wrap(byteArrayOf(0x8F.toByte(), 0x01.toByte()))
+        assertEquals(143, buffer.readVarLong(0))
     }
 
     @Test

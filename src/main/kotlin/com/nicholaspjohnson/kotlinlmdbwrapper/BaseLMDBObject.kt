@@ -36,6 +36,12 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var constSizes: IntArray
 
     /**
+     * Returns the size of this object in-DB
+     */
+    val size: Int
+        get() = data.capacity()
+
+    /**
      * The minimum buffer size [M] will ever need.
      */
     var minBufferSize: Int = -1
