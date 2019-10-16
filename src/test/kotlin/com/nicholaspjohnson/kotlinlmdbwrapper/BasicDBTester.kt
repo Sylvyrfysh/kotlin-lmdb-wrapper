@@ -92,8 +92,8 @@ object BasicDBTester {
     }
 
     class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
-        override fun keyFunc(stack: MemoryStack): ByteBuffer {
-            return stack.malloc(4).putInt(0, key)
+        override fun keyFunc(keyBuffer: ByteBuffer) {
+            keyBuffer.putLong(0, key.toLong())
         }
 
         var key: Int by db

@@ -315,10 +315,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     protected val db = LMDBBaseObjectProvider(this)
 
     /**
-     * Returns a 4 byte long key that is used in int-keyed databases.
-     * Can use [stack] to directly allocate the data quickly.
+     * Returns a key that fits in the [keyBuffer]
      */
-    protected abstract fun keyFunc(stack: MemoryStack): ByteBuffer
+    protected abstract fun keyFunc(keyBuffer: ByteBuffer)
 
     /**
      * Writes only this object into the [dbi] of [env].
@@ -326,7 +325,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      */
     fun writeInSingleTX(env: Long, dbi: Int) {
         stackPush().use { stack ->
-            val key = keyFunc(stack)
+            val key = stack.malloc(8)
+            keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
@@ -360,7 +360,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     @Throws(DataNotFoundException::class)
     fun readFromDB(env: Long, dbi: Int) {
         stackPush().use { stack ->
-            val key = keyFunc(stack)
+            val key = stack.malloc(8)
+            keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
