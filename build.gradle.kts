@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.nicholaspjohnson"
-version = "0.1.0-rc3"
+version = "0.1.0"
 
 repositories {
     jcenter()
