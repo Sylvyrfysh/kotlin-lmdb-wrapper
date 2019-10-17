@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.nicholaspjohnson"
-version = "0.1.0-rc2.1"
+version = "0.1.0-rc3"
 
 repositories {
     jcenter()
@@ -18,9 +18,11 @@ repositories {
 }
 
 dependencies {
+    // Kotlin deps
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
 
+    // LWJGL Deps
     @Suppress("INACCESSIBLE_TYPE") val lwjglNatives = when (OperatingSystem.current()) {
         OperatingSystem.LINUX   -> System.getProperty("os.arch").let {
             if (it.startsWith("arm") || it.startsWith("aarch64"))
@@ -33,51 +35,29 @@ dependencies {
         else -> throw Error("Unrecognized or unsupported Operating system. Please set \"lwjglNatives\" manually")
     }
 
+    //LWJGL
     implementation(platform("org.lwjgl:lwjgl-bom:3.2.3"))
     for (lwjgl in listOf("", "lmdb", "jemalloc")) {
         val actName = "lwjgl${if (lwjgl.isEmpty()) lwjgl else "-$lwjgl"}"
         implementation("org.lwjgl", actName)
-        runtimeOnly("org.lwjgl", actName, classifier = lwjglNatives)
+        testRuntimeOnly("org.lwjgl", actName, classifier = lwjglNatives)
     }
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.5.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.5.2")
+    //Test Framework
+    testImplementation("org.junit.jupiter", "junit-jupiter-api", "5.5.2")
+    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.5.2")
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
 }
 
 tasks.test {
     useJUnitPlatform()
 }
 
-tasks {
-    dokka {
-        outputFormat = "html"
-        outputDirectory = "$buildDir/javadoc"
-        this.configuration.apply {
-            jdkVersion = 8
-            noStdlibLink = false
-            noJdkLink = false
-            includeNonPublic = false
-            skipDeprecated = false
-            reportUndocumented = true
-            skipEmptyPackages = true
-            targets = listOf("JVM")
-            platform = "JVM"
-
-            sourceLink {
-                path = "src/main/kotlin"
-                url = "https://github.com/Sylvyrfysh/kotlin-lmdb-wrapper/blob/master/src/main/kotlin"
-                lineSuffix = "#L"
-            }
-        }
-    }
-}
-
 val dokka by tasks.getting(DokkaTask::class) {
-    outputFormat = "html"
+    outputFormat = "javadoc"
     outputDirectory = "$buildDir/javadoc"
     this.configuration.apply {
         jdkVersion = 8
@@ -94,6 +74,11 @@ val dokka by tasks.getting(DokkaTask::class) {
             path = "src/main/kotlin"
             url = "https://github.com/Sylvyrfysh/kotlin-lmdb-wrapper/blob/master/src/main/kotlin"
             lineSuffix = "#L"
+        }
+
+        perPackageOption {
+            prefix = "com.nicholaspjohnson.kotlinlmdbwrapper.rwps"
+            includeNonPublic = true
         }
     }
 }
