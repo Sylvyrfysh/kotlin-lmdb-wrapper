@@ -1,6 +1,5 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB.*
@@ -549,6 +548,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             .order(ByteOrder.nativeOrder())
             .put(data)
         x.position(0)
+
+        MemoryUtil.memFree(data)
+
         initBuffers(x)
         isOnDBAddress = false
     }
