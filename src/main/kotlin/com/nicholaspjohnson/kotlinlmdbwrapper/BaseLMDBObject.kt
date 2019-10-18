@@ -1,6 +1,5 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB.*
@@ -149,7 +148,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         require(!haveTypes.containsKey(name)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
         haveTypes[name] = type
-        if(varSizeDefault != null) {
+        if (varSizeDefault != null) {
             require(!type.isConstSize) { "Const-Sized types cannot have custom space allocated!" }
             require(varSizeDefault.minimumSize >= type.minSize) { "VarSizeDefault must be greater than or equal to the minimum size type!" }
             require(varSizeDefault.minimumSize <= type.maxSize) { "VarSizeDefault must be less than or equal to the maximum size type!" }
@@ -270,32 +269,21 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             }
         }
 
-        if (!newOffsets.contentEquals(offsets)) {
-            val newBuffer = data.capacity() < ((newSize - sizes[changedIdx]) + sizes.sum())
-            val writeBuf =
-                if (newBuffer) {
-                    val x = ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum())
-                        .order(ByteOrder.nativeOrder())
-                        .put(data)
-                    x.position(0)
-                    x
-                } else {
-                    data
-                }
-            for (i in newOffsets.toList().withIndex().filterNot { it.value == offsets[it.index] }.sortedByDescending { it.value }) {
-                val dCpy = ByteArray(sizes[i.index])
-                data.position(offsets[i.index])
-                data.get(dCpy)
-                data.position(0)
-                writeBuf.position(i.value)
-                writeBuf.put(dCpy)
-                writeBuf.position(0)
-            }
-            if (newBuffer) {
-                initBuffers(writeBuf)
-            }
-            offsets = newOffsets
+        val writeBuf = ByteBuffer.allocate((newSize - sizes[changedIdx]) + sizes.sum())
+            .order(ByteOrder.nativeOrder())
+            .put(data)
+        writeBuf.position(0)
+        for (i in newOffsets.toList().withIndex().filterNot { it.value == offsets[it.index] }.sortedByDescending { it.value }) {
+            val dCpy = ByteArray(sizes[i.index])
+            data.position(offsets[i.index])
+            data.get(dCpy)
+            data.position(0)
+            writeBuf.position(i.value)
+            writeBuf.put(dCpy)
+            writeBuf.position(0)
         }
+        initBuffers(writeBuf)
+        offsets = newOffsets
         sizes[changedIdx] = newSize
     }
 
@@ -500,7 +488,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     fun setVarChar(index: Int, value: String) {
-        val utf8Data = MemoryUtil.memUTF8(value, true)
+        val utf8Data = MemoryUtil.memUTF8(value, false)
         val memUTF8Len = utf8Data.capacity()
         val fullSize = memUTF8Len + (2 * memUTF8Len.toLong().getVarLongSize())
         require(fullSize <= types[index].maxSize) { "Item exceeds VarChar size!" }
@@ -533,7 +521,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             stackPush().use { stack ->
                 val dirBuf = stack.malloc(currentSize.toInt())
                 val oldLimit = data.limit()
-                data.limit(offsets[index] + diskSizeLen + currentSize.getVarLongSize() + currentSize.toInt()).position(offsets[index] + diskSizeLen + currentSize.getVarLongSize())
+                data.limit(offsets[index] + diskSizeLen + currentSize.getVarLongSize() + currentSize.toInt())
+                    .position(offsets[index] + diskSizeLen + currentSize.getVarLongSize())
                 dirBuf.put(data)
                 data.position(0).limit(oldLimit)
 

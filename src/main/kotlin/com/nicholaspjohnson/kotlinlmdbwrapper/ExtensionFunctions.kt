@@ -27,7 +27,8 @@ fun ByteBuffer.writeVarLong(startPoint: Int, data: Long) {
         val hasMore = (rem ushr 7) != 0L
         val dChunk = ((rem and 0x7F) + if (hasMore) 0x80 else 0).toByte()
         rem = rem ushr 7
-        this.put(startPoint + idx++, dChunk)
+        this.put(startPoint + idx, dChunk)
+        ++idx
     } while (hasMore)
 }
 
