@@ -29,3 +29,16 @@ class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.New) {
     @VarChar(100)
     var varchar: String by db
 }
+
+class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.New) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, normInt.toLong())
+    }
+
+    var normInt: Int by db
+    var nullableInt: Int? by db
+    @VarChar(100)
+    var aNullableString: String? by db
+    @VarChar(100)
+    var normalString: String by db
+}

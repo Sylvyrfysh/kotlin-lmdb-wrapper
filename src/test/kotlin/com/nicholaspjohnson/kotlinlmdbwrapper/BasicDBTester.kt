@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.util.lmdb.LMDB
-import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Paths
 

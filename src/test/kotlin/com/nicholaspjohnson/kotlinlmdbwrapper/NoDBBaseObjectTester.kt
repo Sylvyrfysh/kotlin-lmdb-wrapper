@@ -1,8 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.nio.ByteBuffer
 
 object NoDBBaseObjectTester {
     @Test
@@ -40,5 +39,21 @@ object NoDBBaseObjectTester {
         assertEquals(double, ato.double)
         assertEquals(varlong, ato.varlong)
         assertEquals(varchar, ato.varchar)
+    }
+
+    @Test
+    fun `Test mixed normal and nulls basic get`() {
+        val mixNormalNulls = MixNormalNulls()
+        mixNormalNulls.normInt = 780780
+        mixNormalNulls.nullableInt = 35
+        mixNormalNulls.aNullableString = "This is a string first."
+        mixNormalNulls.normalString = "This is something I guess"
+        mixNormalNulls.aNullableString = null
+
+        assertEquals(780780, mixNormalNulls.normInt)
+        assertNotNull(mixNormalNulls.nullableInt)
+        assertEquals(35, mixNormalNulls.nullableInt!!)
+        assertEquals("This is something I guess", mixNormalNulls.normalString)
+        assertNull(mixNormalNulls.aNullableString)
     }
 }

@@ -209,12 +209,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     // This is not ok for reading from DB
                     val size = t.minSize + 1
                     offsets[index] = byteOffset
-                    constOffsets[index] = byteOffset
                     sizes[index] = size
-                    constSizes[index] = size
                     remainingTypes[index] = null
                     byteOffset += size
-                    constSizeSetSize += size
                 }
             }
             for ((index, t) in remainingTypes.withIndex().filterNot { it.value == null }) {
@@ -236,20 +233,23 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
         val remainingTypes = varSizeTypes.copyOf()
 
-        var needsChange = false
         val newOffsets = offsets.copyOf()
+        val pushForward = (newSize - sizes[changedIdx])
 
-        while (remainingTypes.asList().filterNotNull().count() > 0) {
-            for ((index, t) in remainingTypes.withIndex()) {
-                if (t == null) {
-                    continue
-                }
+        for ((index, t) in remainingTypes.withIndex().filterNot { it.value == null }) {
+            if (t!!.isConstSize && offsets[index] > offsets[changedIdx]) {
+                // We only have const-sized null types in this loop, so we can use minSize + 1 as size and get offsets that way
+                // This is not ok for reading from DB
+                newOffsets[index] = offsets[index] + pushForward
+                remainingTypes[index] = null
+            }
+        }
 
-                if (needsChange) {
-                    newOffsets[index] += (newSize - sizes[changedIdx])
-                } else if (index == changedIdx) {
-                    needsChange = true
-                }
+        for ((index, t) in remainingTypes.withIndex().filterNot { it.value == null }) {
+            // We only have potentially null, non-const-size types in this loop, so we can use minSize + 1 as size and get offsets that way
+            // This is not ok for reading from DB
+            if (offsets[index] > offsets[changedIdx]) {
+                newOffsets[index] = offsets[index] + pushForward
                 remainingTypes[index] = null
             }
         }
