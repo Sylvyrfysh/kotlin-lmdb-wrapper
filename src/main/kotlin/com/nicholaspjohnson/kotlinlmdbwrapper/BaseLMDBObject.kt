@@ -16,12 +16,6 @@ import java.nio.*
  */
 abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private lateinit var data: ByteBuffer
-    private lateinit var dataShorts: ShortBuffer
-    private lateinit var dataChars: CharBuffer
-    private lateinit var dataInts: IntBuffer
-    private lateinit var dataLongs: LongBuffer
-    private lateinit var dataFloats: FloatBuffer
-    private lateinit var dataDoubles: DoubleBuffer
 
     private lateinit var types: Array<LMDBType<*>>
     private lateinit var varSizeTypes: Array<LMDBType<*>?>
@@ -52,7 +46,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         private set
     private var constSizeSetSize: Int = -1
     private var requestedExtraSize: Int = 0
-    private var maxAlign: Int = -1
     private var justReadFromDB = false
 
     /**
@@ -109,12 +102,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         checkBuffer(newData)
         data = newData
         data.position(0)
-        dataShorts = data.asShortBuffer()
-        dataChars = data.asCharBuffer()
-        dataInts = data.asIntBuffer()
-        dataLongs = data.asLongBuffer()
-        dataFloats = data.asFloatBuffer()
-        dataDoubles = data.asDoubleBuffer()
         if (justReadFromDB && hasVarSizeItems) {
             // Read from the DB- Recalculate our offsets
             var pushForward = 0
@@ -195,16 +182,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                         continue
                     }
                     if (t == cPref) {
-                        // We only have const-sized types in this loop, so we can use align as size and get offsets that way
-                        offsets[index] = byteOffset / t.align
-                        constOffsets[index] = byteOffset / t.align
-                        sizes[index] = t.align
-                        constSizes[index] = t.align
+                        // We only have const-sized types in this loop, so we can use minSize as size and get offsets that way
+                        offsets[index] = byteOffset
+                        constOffsets[index] = byteOffset
+                        sizes[index] = t.minSize
+                        constSizes[index] = t.minSize
                         remainingTypes[index] = null
-                        byteOffset += t.align
-                        constSizeSetSize += t.align
-
-                        maxAlign = maxAlign.coerceAtLeast(t.align)
+                        byteOffset += t.minSize
+                        constSizeSetSize += t.minSize
                     }
                 }
             } else {
@@ -215,15 +200,13 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
                     if (t.isConstSize) {
                         // We only have const-sized types in this loop, so we can use align as size and get offsets that way
-                        offsets[index] = byteOffset / t.align
-                        constOffsets[index] = byteOffset / t.align
-                        sizes[index] = t.align
-                        constSizes[index] = t.align
+                        offsets[index] = byteOffset
+                        constOffsets[index] = byteOffset
+                        sizes[index] = t.minSize
+                        constSizes[index] = t.minSize
                         remainingTypes[index] = null
-                        byteOffset += t.align
-                        constSizeSetSize += t.align
-
-                        maxAlign = maxAlign.coerceAtLeast(t.align)
+                        byteOffset += t.minSize
+                        constSizeSetSize += t.minSize
                     }
                 }
 
@@ -403,74 +386,74 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     fun getShort(index: Int): Short {
-        return dataShorts[offsets[index]]
+        return data.getShort(offsets[index])
     }
 
     fun setShort(index: Int, value: Short) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataShorts.put(offsets[index], value)
+        data.putShort(offsets[index], value)
         committed = false
     }
 
     fun getChar(index: Int): Char {
-        return dataChars[offsets[index]]
+        return data.getChar(offsets[index])
     }
 
     fun setChar(index: Int, value: Char) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataChars.put(offsets[index], value)
+        data.putChar(offsets[index], value)
         committed = false
     }
 
     fun getInt(index: Int): Int {
-        return dataInts[offsets[index]]
+        return data.getInt(offsets[index])
     }
 
     fun setInt(index: Int, value: Int) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataInts.put(offsets[index], value)
+        data.putInt(offsets[index], value)
         committed = false
     }
 
     fun getFloat(index: Int): Float {
-        return dataFloats[offsets[index]]
+        return data.getFloat(offsets[index])
     }
 
     fun setFloat(index: Int, value: Float) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataFloats.put(offsets[index], value)
+        data.putFloat(offsets[index], value)
         committed = false
     }
 
     fun getLong(index: Int): Long {
-        return dataLongs[offsets[index]]
+        return data.getLong(offsets[index])
     }
 
     fun setLong(index: Int, value: Long) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataLongs.put(offsets[index], value)
+        data.putLong(offsets[index], value)
         committed = false
     }
 
     fun getDouble(index: Int): Double {
-        return dataDoubles[offsets[index]]
+        return data.getDouble(offsets[index])
     }
 
     fun setDouble(index: Int, value: Double) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        dataDoubles.put(offsets[index], value)
+        data.putDouble(offsets[index], value)
         committed = false
     }
 
