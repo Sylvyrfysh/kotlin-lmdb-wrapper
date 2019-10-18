@@ -37,7 +37,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(private val obj: BaseLMDBObje
             else -> error("New type no impl ${prop.returnType}")
         }
         val vsd = prop.annotations.filterIsInstance<VarSizeDefault>().firstOrNull()
-        obj.addType(prop.name, lmdbType, vsd)
+        obj.addType(prop.name, lmdbType, prop.returnType.isMarkedNullable, vsd)
         return when (prop.returnType.classifier) {
             Boolean::class -> BoolRWP(obj, prop.name)
             Byte::class -> ByteRWP(obj, prop.name)

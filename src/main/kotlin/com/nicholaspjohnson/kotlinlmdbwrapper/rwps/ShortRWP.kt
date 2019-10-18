@@ -12,9 +12,10 @@ import kotlin.reflect.KProperty
  */
 class ShortRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setShort(index, value as Short)
+        thisRef.setShort(index, value as Short?)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
         return thisRef.getShort(index) as T
     }

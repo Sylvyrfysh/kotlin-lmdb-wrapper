@@ -88,15 +88,21 @@ object BasicDBTester {
 
     @Test
     fun `Test Simple Object Size`() {
-        assertEquals(8, testObj1.size)
+        assertEquals(9, testObj1.size)
+        assertEquals(9, testObj1.minBufferSize)
+        assertEquals(9, testObj1.maxBufferSize)
     }
 
-    class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
-        override fun keyFunc(keyBuffer: ByteBuffer) {
-            keyBuffer.putLong(0, key.toLong())
-        }
-
-        var key: Int by db
-        var data: Int by db
+    @Test
+    fun `Test data stays null`() {
+        val methodKey = nextID
+        val testObj2 = TestObj(ObjectBufferType.New)
+        testObj2.key = methodKey
+        testObj2.data = null
+        testObj2.writeInSingleTX(env, dbi)
+        val testObj3 = TestObj(ObjectBufferType.New)
+        testObj3.key = methodKey
+        testObj3.readFromDB(env, dbi)
+        assertEquals(null, testObj3.data)
     }
 }

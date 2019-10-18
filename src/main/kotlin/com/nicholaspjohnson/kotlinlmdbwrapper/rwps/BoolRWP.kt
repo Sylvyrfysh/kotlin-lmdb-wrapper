@@ -12,9 +12,10 @@ import kotlin.reflect.KProperty
  */
 class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String): AbstractRWP<M>(lmdbObject, propertyName) {
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setBool(index, value as Boolean)
+        thisRef.setBool(index, value as Boolean?)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
         return thisRef.getBool(index) as T
     }

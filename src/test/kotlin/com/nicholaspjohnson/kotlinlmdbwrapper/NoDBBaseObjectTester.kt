@@ -41,23 +41,4 @@ object NoDBBaseObjectTester {
         assertEquals(varlong, ato.varlong)
         assertEquals(varchar, ato.varchar)
     }
-
-    class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.New) {
-        override fun keyFunc(keyBuffer: ByteBuffer) {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
-        var bool: Boolean by db
-        var byte: Byte by db
-        var short: Short by db
-        var char: Char by db
-        var int: Int by db
-        var float: Float by db
-        var long: Long by db
-        var double: Double by db
-        @VarLong
-        var varlong: Long by db
-        @VarChar(100)
-        var varchar: String by db
-    }
 }

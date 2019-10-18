@@ -12,9 +12,10 @@ import kotlin.reflect.KProperty
  */
 class CharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setChar(index, value as Char)
+        thisRef.setChar(index, value as Char?)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
         return thisRef.getChar(index) as T
     }

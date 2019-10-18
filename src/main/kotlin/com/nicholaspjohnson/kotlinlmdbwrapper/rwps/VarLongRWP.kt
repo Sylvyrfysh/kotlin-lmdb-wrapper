@@ -13,9 +13,10 @@ import kotlin.reflect.KProperty
  */
 class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setVarLong(index, value as Long)
+        thisRef.setVarLong(index, value as Long?)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
         return thisRef.getVarLong(index) as T
     }
