@@ -100,6 +100,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         require(buffer.order() == ByteOrder.nativeOrder()) { "The buffer order must be equal to ByteOrder.nativeOrder()!" }
     }
 
+    /**
+     * TODO: Any non-const size needs an on-disk size header. Required for branch merge, as varlongs may currently break disk load.
+     *
+     * Reads and sets the data and will redo offsets if read from DB
+     */
     private fun initBuffers(newData: ByteBuffer) {
         checkBuffer(newData)
         data = newData
@@ -107,29 +112,43 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         if (justReadFromDB && hasVarSizeItems) {
             // Read from the DB- Recalculate our offsets
             var pushForward = 0
-            for ((index, t) in varSizeTypes.withIndex()) {
-                if (t == null) {
-                    continue
+            val remainingTypes = varSizeTypes.copyOf()
+            for ((index, t) in remainingTypes.withIndex().filterNot { it.value == null }) {
+                if (t!!.isConstSize) {
+                    // We only have const-sized null types in this loop, so we currently don't need to do any special calculation
+                    remainingTypes[index] = null
                 }
+            }
 
-                val normalSize = minSizes.getOrDefault(intsToName.getValue(index), t.minSize)
-                val currentSize = if (nullables[index]) {
-                    val (isNull, isCompact) = readNullableHeader(offsets[index] + pushForward + 1)
-                    if (isCompact) {
+            for ((index, t) in remainingTypes.withIndex().filterNot { it.value == null }) {
+                // We only have potentially null, non-const-size types in this loop. Definitely need offset recalculation
+                if (nullables[index]) {
+                    offsets[index] += pushForward
+                    val (isNull, isCompressed) = readNullableHeader(offsets[index])
+                    val itemSize = if (isCompressed) {
                         1
                     } else {
-                        normalSize.coerceAtLeast(t.getItemSizeFromDB(data, offsets[index] + pushForward)) + 1
+                        if (t == LMDBType.LVarLong && isNull) {
+                            1
+                        } else {
+                            t!!.getItemSizeFromDB(data, offsets[index] + 1)
+                        }
+                    }
+
+                    if (itemSize > sizes[index]) {
+                        pushForward += (itemSize - sizes[index])
+                        sizes[index] = itemSize
                     }
                 } else {
-                    normalSize.coerceAtLeast(t.getItemSizeFromDB(data, offsets[index] + pushForward))
-                }
-                if (pushForward > 0) {
+                    //easy route- just read it and update it
                     offsets[index] += pushForward
+                    val itemSize = t!!.getItemSizeFromDB(data, offsets[index])
+                    if (itemSize > sizes[index]) {
+                        pushForward += (itemSize - sizes[index])
+                        sizes[index] = itemSize
+                    }
                 }
-                sizes[index] = currentSize
-                if (currentSize > normalSize) {
-                    pushForward += (currentSize - normalSize)
-                }
+                remainingTypes[index] = null
             }
             justReadFromDB = false
         }
@@ -140,6 +159,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private val minSizes = HashMap<String, Int>()
 
     /**
+     * TODO: Move nullable into minSize here
+     *
      * Adds an object to this object with the name [name] and [LMDBType] [type] that is [nullable].
      * If it is a variably sized attribute and annotated with [VarSizeDefault], this will put a custom minimum size on the object.
      */

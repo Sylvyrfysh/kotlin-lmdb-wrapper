@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
@@ -103,5 +104,27 @@ object BasicDBTester {
         testObj3.key = methodKey
         testObj3.readFromDB(env, dbi)
         assertEquals(null, testObj3.data)
+    }
+
+    @Test
+    fun `Test data offsets after load`() {
+        val methodKey = nextID
+        val mixNormalNulls = MixNormalNulls()
+        mixNormalNulls.normInt = methodKey
+        mixNormalNulls.nullableInt = 35
+        mixNormalNulls.aNullableString = "This is a string first."
+        mixNormalNulls.normalString = "This is something I guess"
+        mixNormalNulls.aNullableString = null
+        mixNormalNulls.writeInSingleTX(env, dbi)
+
+        val mixNormalNulls2 = MixNormalNulls()
+        mixNormalNulls2.normInt = methodKey
+        mixNormalNulls2.readFromDB(env, dbi)
+
+        assertEquals(methodKey, mixNormalNulls2.normInt)
+        Assertions.assertNotNull(mixNormalNulls2.nullableInt)
+        assertEquals(35, mixNormalNulls2.nullableInt!!)
+        assertEquals("This is something I guess", mixNormalNulls2.normalString)
+        Assertions.assertNull(mixNormalNulls2.aNullableString)
     }
 }
