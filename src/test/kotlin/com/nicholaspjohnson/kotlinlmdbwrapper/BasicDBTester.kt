@@ -127,4 +127,20 @@ object BasicDBTester {
         assertEquals("This is something I guess", mixNormalNulls2.normalString)
         Assertions.assertNull(mixNormalNulls2.aNullableString)
     }
+
+    @Test
+    fun `Test shrink VarSize does not break`() {
+        val methodKey = nextID
+        val fs1 = MultipleVarLongs()
+        fs1.first = Long.MAX_VALUE
+        fs1.second = 2
+        fs1.first = methodKey.toLong()
+        fs1.writeInSingleTX(env, dbi)
+
+        val fs2 = MultipleVarLongs()
+        fs2.first = methodKey.toLong()
+        fs2.readFromDB(env, dbi)
+
+        assertEquals(2L, fs2.second)
+    }
 }

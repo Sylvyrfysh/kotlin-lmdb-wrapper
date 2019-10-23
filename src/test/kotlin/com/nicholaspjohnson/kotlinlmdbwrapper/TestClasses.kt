@@ -42,3 +42,14 @@ class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.New) {
     @VarChar(100)
     var normalString: String by db
 }
+
+class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.New) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, first)
+    }
+
+    @VarLong
+    var first: Long by db
+    @VarLong
+    var second: Long by db
+}
