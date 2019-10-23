@@ -612,7 +612,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         if (isOnDBAddress) {
             moveFromDBAddress()
         }
-        val newSize = if (nullables[index]) {
+        // Disk size byte
+        val newSize = 1 + if (nullables[index]) {
             (value?.getVarLongSize() ?: 0) + 1 //size on disk plus nullable header
         } else {
             value!!.getVarLongSize()
@@ -622,10 +623,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         if (nullables[index]) {
             writeNullableHeader(dataOffset, value == null, false)
             if (value != null) {
-                data.writeVarLong(dataOffset + 1, value)
+                val diskSize = sizes[index].toLong()
+                data.writeVarLong(dataOffset + 1, diskSize)
+                data.writeVarLong(dataOffset + 2, value)
             }
         } else {
-            data.writeVarLong(dataOffset, value!!)
+            val diskSize = sizes[index].toLong()
+            data.writeVarLong(dataOffset, diskSize)
+            data.writeVarLong(dataOffset + 1, value!!)
         }
         committed = false
     }
@@ -639,7 +644,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             }
             dataOffset += 1
         }
-        return data.readVarLong(dataOffset)
+        return data.readVarLong(dataOffset + 1)
     }
 
     internal fun setVarChar(index: Int, value: String?) {

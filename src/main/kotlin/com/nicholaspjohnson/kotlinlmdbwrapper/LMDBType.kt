@@ -69,16 +69,16 @@ open class LMDBType<T>(
          * A basic [LMDBType] for [Long]s that will internally be stored as a VarLong
          */
         @JvmField
-        val LVarLong = object : LMDBType<Long>(Long::class.java, false, 10, 1) {
+        val LVarLong = object : LMDBType<Long>(Long::class.java, false, 11, 1) {
             override fun getItemSizeFromDB(data: ByteBuffer, startPoint: Int): Int {
-                var size = 0
-                while (data[startPoint + size].toInt() and 0x80 == 0x80) {
-                    ++size
+                val diskSize = data.readVarLong(startPoint)
+                if (diskSize == 0L) {
+                    return 1
                 }
-                return size + 1
+                return diskSize.toInt()
             }
 
-            override fun getItemSizeFromPlain(item: Long) = item.getVarLongSize()
+            override fun getItemSizeFromPlain(item: Long) = 1 + item.getVarLongSize()
         }
 
         /**
