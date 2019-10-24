@@ -101,8 +101,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     /**
-     * TODO: Any non-const size needs an on-disk size header. Required for branch merge, as varlongs may currently break disk load.
-     *
      * Reads and sets the data and will redo offsets if read from DB
      */
     private fun initBuffers(newData: ByteBuffer) {
@@ -159,8 +157,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     private val minSizes = HashMap<String, Int>()
 
     /**
-     * TODO: Move nullable into minSize here
-     *
      * Adds an object to this object with the name [name] and [LMDBType] [type] that is [nullable].
      * If it is a variably sized attribute and annotated with [VarSizeDefault], this will put a custom minimum size on the object.
      */
