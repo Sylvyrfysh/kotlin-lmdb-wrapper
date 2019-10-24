@@ -15,4 +15,9 @@ interface RWPInterface<M: BaseLMDBObject<M>> {
      * Sets the underlying value of [property] in the class [M]'s [thisRef] instance to [value]]
      */
     operator fun <T> setValue(thisRef: M, property: KProperty<*>, value: T)
+
+    /**
+     * Returns the size of this object when it is written to the DB
+     */
+    fun getDiskSize(): Int
 }

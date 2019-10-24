@@ -1,22 +1,29 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
-import kotlin.reflect.KProperty
+import java.nio.ByteBuffer
 
 /**
  * A default [Float] RWP that will act on instances of the class [M]
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP]
+ * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setFloat(index, value as Float?)
-    }
+class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Float?>(obj, name) {
+    override val itemSize: Int = java.lang.Float.BYTES
+    override val readFn: (ByteBuffer, Int) -> Float? = ByteBuffer::getFloat
+    override val writeFn: (ByteBuffer, Int, Float?) -> Unit = ::compWriteFn
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
-        return thisRef.getFloat(index) as T
+    /**
+     * Helper methods.
+     */
+    companion object {
+        /**
+         * Writes the non-null [value] to [buffer] at [offset].
+         */
+        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Float?) {
+            buffer.putFloat(offset, value!!)
+        }
     }
 }

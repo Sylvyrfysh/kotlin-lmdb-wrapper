@@ -17,4 +17,5 @@ annotation class VarChar(val maxLength: Int)
  *
  * @property minimumSize the minimum size of this object in-DB
  */
+@Deprecated("This is no longer applicable and does nothing.")
 annotation class VarSizeDefault(val minimumSize: Int)

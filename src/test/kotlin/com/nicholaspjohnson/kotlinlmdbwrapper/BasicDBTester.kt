@@ -87,13 +87,6 @@ object BasicDBTester {
     }
 
     @Test
-    fun `Test Simple Object Size`() {
-        assertEquals(9, testObj1.size)
-        assertEquals(9, testObj1.minBufferSize)
-        assertEquals(9, testObj1.maxBufferSize)
-    }
-
-    @Test
     fun `Test data stays null`() {
         val methodKey = nextID
         val testObj2 = TestObj(ObjectBufferType.New)
@@ -142,5 +135,51 @@ object BasicDBTester {
         fs2.readFromDB(env, dbi)
 
         assertEquals(2L, fs2.second)
+    }
+
+    @Test
+    fun `Test that all stay expected with DB rw`() {
+        val methodKey = nextID.toLong()
+
+        val bool = true
+        val byte = 23.toByte()
+        val short = 652.toShort()
+        val char = 'Z'
+        val int = 74482
+        val float = 2578904.245f
+        val long = methodKey
+        val double = 31876915.31568135
+        val varlong = 156937804914256L
+        val varchar = "This is a testing string. It isn't that special."
+
+        val ato = AllTypesObject()
+        ato.bool = bool
+        ato.byte = byte
+        ato.short = short
+        ato.char = char
+        ato.int = int
+        ato.float = float
+        ato.long = long
+        ato.double = double
+        ato.varlong = varlong
+        ato.varchar = varchar
+
+        ato.writeInSingleTX(env, dbi)
+
+        val ato2 = AllTypesObject()
+        ato2.long = methodKey
+
+        ato2.readFromDB(env, dbi)
+
+        assertEquals(bool, ato2.bool)
+        assertEquals(byte, ato2.byte)
+        assertEquals(short, ato2.short)
+        assertEquals(char, ato2.char)
+        assertEquals(int, ato2.int)
+        assertEquals(float, ato2.float)
+        assertEquals(long, ato2.long)
+        assertEquals(double, ato2.double)
+        assertEquals(varlong, ato2.varlong)
+        assertEquals(varchar, ato2.varchar)
     }
 }

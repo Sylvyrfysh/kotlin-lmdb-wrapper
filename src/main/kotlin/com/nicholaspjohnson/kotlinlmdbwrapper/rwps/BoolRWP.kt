@@ -1,22 +1,36 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
-import kotlin.reflect.KProperty
+import java.nio.ByteBuffer
 
 /**
  * A default [Boolean] RWP that will act on instances of the class [M]
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP]
+ * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String): AbstractRWP<M>(lmdbObject, propertyName) {
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setBool(index, value as Boolean?)
-    }
+class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String) : ConstSizeRWP<M, Boolean?>(lmdbObject, propertyName) {
+    override val itemSize: Int = 1
+    override val readFn: (ByteBuffer, Int) -> Boolean = ::compReadFn
+    override val writeFn: (ByteBuffer, Int, Boolean?) -> Unit = ::compWriteFn
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
-        return thisRef.getBool(index) as T
+    /**
+     * Helper methods.
+     */
+    companion object {
+        /**
+         * Writes the non-null [value] to [buffer] at [offset].
+         */
+        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Boolean?) {
+            buffer.put(offset, if (value!!) 1.toByte() else 0.toByte())
+        }
+
+        /**
+         * Reads and returns the non-null value from [buffer] at [offset].
+         */
+        private fun compReadFn(buffer: ByteBuffer, offset: Int): Boolean {
+            return buffer.get(offset) != 0.toByte()
+        }
     }
 }

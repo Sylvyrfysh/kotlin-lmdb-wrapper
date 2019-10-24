@@ -1,23 +1,37 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
-import kotlin.reflect.KProperty
+import com.nicholaspjohnson.kotlinlmdbwrapper.*
+import java.nio.ByteBuffer
 
 /**
  * A default [Long] RWP that will act on instances of the class [M].
- * Writes and reads data as a VarLong internally
+ * Writes and reads data as a VarLong internally.
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP]
+ * Passes [lmdbObject] and [propertyName] to the underlying [VarSizeRWP],
  */
-class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String): AbstractRWP<M>(obj, name) {
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
-        thisRef.setVarLong(index, value as Long?)
-    }
+class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : VarSizeRWP<M, Long?>(obj, name) {
+    override val readFn: (ByteBuffer, Int) -> Long = ByteBuffer::readVarLong
+    override val writeFn: (ByteBuffer, Int, Long?) -> Any? = ::compWriteFn
+    override val getItemOnlySize: (Long?) -> Int = ::compSizeFn
 
-    @Suppress("UNCHECKED_CAST")
-    override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
-        return thisRef.getVarLong(index) as T
+    /**
+     * Helper methods.
+     */
+    companion object {
+        /**
+         * Reads and returns the non-null value in [buffer] at [offset].
+         */
+        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Long?) {
+            buffer.writeVarLong(offset, value!!)
+        }
+
+        /**
+         * Returns the raw size of [item] when encoded as a varlong.
+         */
+        private fun compSizeFn(item: Long?): Int {
+            return item!!.getVarLongSize()
+        }
     }
 }
