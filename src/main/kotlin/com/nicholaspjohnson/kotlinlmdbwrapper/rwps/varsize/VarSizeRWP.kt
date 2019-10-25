@@ -1,8 +1,9 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 

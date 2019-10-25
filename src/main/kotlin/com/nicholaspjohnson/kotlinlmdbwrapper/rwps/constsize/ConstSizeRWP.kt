@@ -1,8 +1,8 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import java.nio.ByteBuffer
-import kotlin.reflect.KProperty
 
 /**
  * A constant sized item of type [R] contained in class [M].

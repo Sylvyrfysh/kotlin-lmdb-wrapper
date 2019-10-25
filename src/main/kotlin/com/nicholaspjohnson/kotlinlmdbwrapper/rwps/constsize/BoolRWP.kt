@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import java.nio.ByteBuffer
@@ -12,8 +12,10 @@ import java.nio.ByteBuffer
  */
 class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String) : ConstSizeRWP<M, Boolean?>(lmdbObject, propertyName) {
     override val itemSize: Int = 1
-    override val readFn: (ByteBuffer, Int) -> Boolean = ::compReadFn
-    override val writeFn: (ByteBuffer, Int, Boolean?) -> Unit = ::compWriteFn
+    override val readFn: (ByteBuffer, Int) -> Boolean =
+        Companion::compReadFn
+    override val writeFn: (ByteBuffer, Int, Boolean?) -> Unit =
+        Companion::compWriteFn
 
     /**
      * Helper methods.

@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.*
 import java.nio.ByteBuffer
@@ -13,8 +13,10 @@ import java.nio.ByteBuffer
  */
 class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : VarSizeRWP<M, Long?>(obj, name) {
     override val readFn: (ByteBuffer, Int) -> Long = ByteBuffer::readVarLong
-    override val writeFn: (ByteBuffer, Int, Long?) -> Any? = ::compWriteFn
-    override val getItemOnlySize: (Long?) -> Int = ::compSizeFn
+    override val writeFn: (ByteBuffer, Int, Long?) -> Any? =
+        Companion::compWriteFn
+    override val getItemOnlySize: (Long?) -> Int =
+        Companion::compSizeFn
 
     /**
      * Helper methods.

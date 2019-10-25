@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import org.lwjgl.system.MemoryUtil
@@ -14,9 +14,12 @@ import kotlin.text.Charsets.UTF_8
  * Passes [lmdbObject] and [propertyName] to the underlying [VarSizeRWP], and holds [maximumLength] for the maximum length of this string.
  */
 class VarCharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String, private val maximumLength: Int) : VarSizeRWP<M, String?>(obj, name) {
-    override val readFn: (ByteBuffer, Int) -> String? = ::compReadFn
-    override val writeFn: (ByteBuffer, Int, String?) -> Any? = ::compWriteFn
-    override val getItemOnlySize: (String?) -> Int = ::compSizeFn
+    override val readFn: (ByteBuffer, Int) -> String? =
+        Companion::compReadFn
+    override val writeFn: (ByteBuffer, Int, String?) -> Any? =
+        Companion::compWriteFn
+    override val getItemOnlySize: (String?) -> Int =
+        Companion::compSizeFn
 
     @Suppress("UNCHECKED_CAST")
     override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {

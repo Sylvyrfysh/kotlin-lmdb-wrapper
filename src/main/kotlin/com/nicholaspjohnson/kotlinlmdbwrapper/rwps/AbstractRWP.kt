@@ -35,7 +35,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
     /**
      * Returns the size of this object in the database without any nullable headers. Will only be called with non-null mebers.
      */
-    protected abstract val getSize: (R) -> Int
+    internal abstract val getSize: (R) -> Int
 
     /**
      * Sets the [value] of [property] in object [thisRef] of type [M].
