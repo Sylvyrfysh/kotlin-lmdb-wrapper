@@ -56,4 +56,10 @@ object NoDBBaseObjectTester {
         assertEquals("This is something I guess", mixNormalNulls.normalString)
         assertNull(mixNormalNulls.aNullableString)
     }
+    
+    @Test
+    fun `Test default set applies`() {
+        val test = DefaultSetTesterObject()
+        assertEquals(DefaultSetTesterObject.initialSet, test.shouldBeDefault)
+    }
 }

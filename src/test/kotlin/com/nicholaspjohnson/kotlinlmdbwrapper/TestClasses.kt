@@ -63,3 +63,20 @@ class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(ObjectBufferT
     var buffer: ByteArray by db
     var zInt: Int by db
 }
+
+class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var shouldBeDefault: Long by db
+
+    init {
+        set(this::shouldBeDefault, initialSet)
+    }
+
+    companion object {
+        val initialSet = 129834765L
+    }
+}
