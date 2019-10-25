@@ -18,7 +18,7 @@ sealed class ObjectBufferType {
     data class Buffer(val buffer: ByteBuffer) : ObjectBufferType()
 
     /**
-     * Tells us to use the ddatabase-read buffer [buffer].
+     * Tells us to use the database-read buffer [buffer].
      * This signals to move the object before writing to it.
      *
      * @param[buffer] The database-defined buffer
@@ -30,7 +30,7 @@ sealed class ObjectBufferType {
     data class DBRead(val buffer: ByteBuffer) : ObjectBufferType()
 
     /**
-     * Tells us to create a new, default buffer to place the object in.
+     * Tells us to not import a buffer at all and only use DB-backed buffers.
      */
-    object New : ObjectBufferType()
+    object None : ObjectBufferType()
 }

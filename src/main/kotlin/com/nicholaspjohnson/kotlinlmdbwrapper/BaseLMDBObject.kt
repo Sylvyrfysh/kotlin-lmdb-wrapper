@@ -9,6 +9,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.reflect.KProperty0
+import kotlin.reflect.jvm.isAccessible
 
 /**
  * A basic LMDBObject that is of the class [M] which extends [BaseLMDBObject].
@@ -43,7 +45,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     init {
         when (from) {
-            is ObjectBufferType.New -> {
+            is ObjectBufferType.None -> {
                 firstBuf = null
                 committed = false
             }
@@ -60,13 +62,15 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
-    private fun setUsed() {
-        setTypes()
-        if (firstBuf != null) {
-            initBuffers(firstBuf!!)
+    internal fun setUsed() {
+        if (!isInit) {
+            setTypes()
+            if (firstBuf != null) {
+                initBuffers(firstBuf!!)
+            }
+            firstBuf = null
+            isInit = true
         }
-        firstBuf = null
-        isInit = true
     }
 
     private fun checkBuffer(buffer: ByteBuffer) {

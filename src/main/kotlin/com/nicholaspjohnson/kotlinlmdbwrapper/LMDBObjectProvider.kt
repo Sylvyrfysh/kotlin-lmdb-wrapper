@@ -1,11 +1,11 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constarray.ByteArrayRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.KClassifier
 import kotlin.reflect.KFunction1
-import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KProperty
 
 /**
@@ -44,22 +44,20 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
                 val maxL = (prop.annotations.filterIsInstance<VarChar>().firstOrNull() ?: error("Strings must have the VarChar annotation")).maxLength
                 VarCharRWP(obj, prop.name, maxL)
             }
-            ByteArray::class -> {
-                TODO("ArraySize annotations")
-            }
+            ByteArray::class -> ByteArrayRWP(obj, prop.name)
             else -> error("New type no impl ${prop.returnType}")
         }
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
     }
 
-    inline fun <reified D, reified R> custom(
-        fromDBToObj: KFunction1<D, R>,
-        fromObjToDB: KFunction1<R, D>,
-        prop: KMutableProperty0<R>
+    inline fun <reified DBType, reified ObjectType> custom(
+        fromDBToObj: KFunction1<DBType, ObjectType>,
+        fromObjToDB: KFunction1<ObjectType, DBType>,
+        prop: KProperty<ObjectType>
     ): RWPInterface<M> {
-        val d1 = getTypeDelegate(D::class, prop)
+        val d1 = getTypeDelegate(DBType::class, prop)
         @Suppress("UNCHECKED_CAST")
-        return TypeWrapperRWP(d1 as AbstractRWP<M, D?>, fromDBToObj, fromObjToDB, obj, prop.name)
+        return TypeWrapperRWP(d1 as AbstractRWP<M, DBType?>, fromDBToObj, fromObjToDB, obj, prop.name)
     }
 }

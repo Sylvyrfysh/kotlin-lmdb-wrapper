@@ -17,12 +17,12 @@ class TypeWrapperRWP<M: BaseLMDBObject<M>, R, D>(private val underlying: Abstrac
         return underlying.readFromDB(readBuffer, startingOffset)
     }
 
-    override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
+    override fun <T> getValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>): T {
         @Suppress("UNCHECKED_CAST")
         return fromDBToObj(underlying.getValue(thisRef, property)) as T
     }
 
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
+    override fun <T> setValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>, value: T) {
         @Suppress("UNCHECKED_CAST")
         underlying.setValue(thisRef, property, value?.let { fromObjToDB(it as R) })
     }

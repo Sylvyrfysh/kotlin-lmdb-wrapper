@@ -11,7 +11,7 @@ class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
     var data: Int? by db
 }
 
-class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.New) {
+class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, long)
     }
@@ -30,7 +30,7 @@ class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.New) {
     var varchar: String by db
 }
 
-class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.New) {
+class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, normInt.toLong())
     }
@@ -43,7 +43,7 @@ class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.New) {
     var normalString: String by db
 }
 
-class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.New) {
+class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, first)
     }
@@ -52,4 +52,14 @@ class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.New) {
     var first: Long by db
     @VarLong
     var second: Long by db
+}
+
+class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var buffer: ByteArray by db
+    var zInt: Int by db
 }

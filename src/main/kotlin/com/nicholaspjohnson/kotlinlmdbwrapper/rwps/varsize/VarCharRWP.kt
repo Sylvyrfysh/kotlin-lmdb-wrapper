@@ -22,7 +22,7 @@ class VarCharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String, pri
         Companion::compSizeFn
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
+    override fun <T> setValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>, value: T) {
         val temp = value as String?
         if (temp != null) {
             require(temp.length <= maximumLength) { "Strings cannot be longer than their maximum length! (max $maximumLength, attempt ${temp.length})" }

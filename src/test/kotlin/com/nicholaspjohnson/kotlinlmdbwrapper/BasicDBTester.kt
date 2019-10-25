@@ -2,7 +2,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -17,7 +17,7 @@ object BasicDBTester {
 
     private var env: Long = 0L
     private var dbi: Int = 0
-    private val testObj1 = TestObj(ObjectBufferType.New)
+    private val testObj1 = TestObj(ObjectBufferType.None)
 
     private var nextID: Int = 2
         get() = (field++)
@@ -51,7 +51,7 @@ object BasicDBTester {
 
     @Test
     fun `Test Basic Read Write`() {
-        val testObj2 = TestObj(ObjectBufferType.New)
+        val testObj2 = TestObj(ObjectBufferType.None)
         testObj2.key = 1
         testObj2.readFromDB(env, dbi)
         assertEquals(testObj1.data, testObj2.data)
@@ -59,7 +59,7 @@ object BasicDBTester {
 
     @Test
     fun `Test NonExistent Key throws Exception`() {
-        val testObj2 = TestObj(ObjectBufferType.New)
+        val testObj2 = TestObj(ObjectBufferType.None)
         testObj2.key = Integer.MIN_VALUE
         val except = assertThrows<DataNotFoundException> {
             testObj2.readFromDB(env, dbi)
@@ -71,11 +71,11 @@ object BasicDBTester {
     fun `Test ReWrite Does not Modify Others Until ReRead`() {
         val methodKey = nextID
         val firstData = 5678
-        val testObj2 = TestObj(ObjectBufferType.New)
+        val testObj2 = TestObj(ObjectBufferType.None)
         testObj2.key = methodKey
         testObj2.data = firstData
         testObj2.writeInSingleTX(env, dbi)
-        val testObj3 = TestObj(ObjectBufferType.New)
+        val testObj3 = TestObj(ObjectBufferType.None)
         testObj3.key = methodKey
         testObj3.readFromDB(env, dbi)
         assertEquals(firstData, testObj3.data)
@@ -89,11 +89,11 @@ object BasicDBTester {
     @Test
     fun `Test data stays null`() {
         val methodKey = nextID
-        val testObj2 = TestObj(ObjectBufferType.New)
+        val testObj2 = TestObj(ObjectBufferType.None)
         testObj2.key = methodKey
         testObj2.data = null
         testObj2.writeInSingleTX(env, dbi)
-        val testObj3 = TestObj(ObjectBufferType.New)
+        val testObj3 = TestObj(ObjectBufferType.None)
         testObj3.key = methodKey
         testObj3.readFromDB(env, dbi)
         assertEquals(null, testObj3.data)
@@ -181,5 +181,26 @@ object BasicDBTester {
         assertEquals(double, ato2.double)
         assertEquals(varlong, ato2.varlong)
         assertEquals(varchar, ato2.varchar)
+    }
+
+    @Test
+    fun `Test basic ByteArray size setting and loading`() {
+        val methodKey = nextID.toLong()
+        val testArr = ByteArray(32, Int::toByte)
+
+        val bbo = ByteArrayTesterObject()
+        bbo.buffer = testArr
+        bbo.zInt = 5
+        bbo.key = methodKey
+
+        bbo.writeInSingleTX(env, dbi)
+
+        val bbo2 = ByteArrayTesterObject()
+        bbo2.key = methodKey
+        assertNull(bbo2.buffer)
+
+        bbo2.readFromDB(env, dbi)
+
+        assertArrayEquals(testArr, bbo2.buffer)
     }
 }

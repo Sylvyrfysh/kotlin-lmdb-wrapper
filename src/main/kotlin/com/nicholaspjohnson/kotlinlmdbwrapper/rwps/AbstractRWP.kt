@@ -41,7 +41,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
      * Sets the [value] of [property] in object [thisRef] of type [M].
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> setValue(thisRef: M, property: KProperty<*>, value: T) {
+    override fun <T> setValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>, value: T) {
         field = value as R?
     }
 
@@ -49,7 +49,8 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
      * Gets the value of [property] in [thisRef] of type [M].
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> getValue(thisRef: M, property: KProperty<*>): T {
+    override fun <T> getValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>): T {
+        lmdbObject.setUsed()
         return field as T
     }
 
