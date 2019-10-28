@@ -1,7 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constarray.ByteArrayRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays.ByteArrayRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.KClassifier
@@ -55,7 +55,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         fromDBToObj: KFunction1<DBType, ObjectType>,
         fromObjToDB: KFunction1<ObjectType, DBType>,
         prop: KProperty<ObjectType>
-    ): RWPInterface<M> {
+    ): AbstractRWP<M, ObjectType> {
         val d1 = getTypeDelegate(DBType::class, prop)
         @Suppress("UNCHECKED_CAST")
         return TypeWrapperRWP(d1 as AbstractRWP<M, DBType?>, fromDBToObj, fromObjToDB, obj, prop.name)

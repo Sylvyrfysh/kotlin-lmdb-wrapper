@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constarray
+package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
