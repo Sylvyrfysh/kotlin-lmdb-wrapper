@@ -64,6 +64,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         IntArray::class -> IntArrayRWP::class
         LongArray::class -> LongArrayRWP::class
         ShortArray::class -> ShortArrayRWP::class
+        List::class -> error("Use db.list!")
         else -> error("New type no impl $type")
     } as KClass<AbstractRWP<M, *>>
 
