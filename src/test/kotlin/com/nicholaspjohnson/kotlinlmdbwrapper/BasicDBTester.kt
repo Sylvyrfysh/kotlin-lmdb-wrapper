@@ -203,4 +203,23 @@ object BasicDBTester {
 
         assertArrayEquals(testArr, bbo2.buffer)
     }
+
+    @Test
+    fun `Test ShortArray offset 1`() {
+        val methodKey = nextID.toLong()
+        val expectArray = ShortArray(16, Int::toShort)
+
+        val writeObj = MisalignedShortArray()
+        writeObj.key = methodKey
+        writeObj.single = 25.toByte()
+        writeObj.zArray = expectArray
+
+        writeObj.writeInSingleTX(env, dbi)
+
+        val readObj = MisalignedShortArray()
+        readObj.key = methodKey
+        readObj.readFromDB(env, dbi)
+
+        assertArrayEquals(expectArray, readObj.zArray)
+    }
 }

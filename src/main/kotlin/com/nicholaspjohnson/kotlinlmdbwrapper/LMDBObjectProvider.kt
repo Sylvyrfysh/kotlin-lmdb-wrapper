@@ -1,7 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays.ByteArrayRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.KClassifier
@@ -44,7 +44,14 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
                 val maxL = (prop.annotations.filterIsInstance<VarChar>().firstOrNull() ?: error("Strings must have the VarChar annotation")).maxLength
                 VarCharRWP(obj, prop.name, maxL)
             }
+            BooleanArray::class -> BoolArrayRWP(obj, prop.name)
             ByteArray::class -> ByteArrayRWP(obj, prop.name)
+            CharArray::class -> CharArrayRWP(obj, prop.name)
+            DoubleArray::class -> DoubleArrayRWP(obj, prop.name)
+            FloatArray::class -> FloatArrayRWP(obj, prop.name)
+            IntArray::class -> IntArrayRWP(obj, prop.name)
+            LongArray::class -> LongArrayRWP(obj, prop.name)
+            ShortArray::class -> ShortArrayRWP(obj, prop.name)
             else -> error("New type no impl ${prop.returnType}")
         }
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)

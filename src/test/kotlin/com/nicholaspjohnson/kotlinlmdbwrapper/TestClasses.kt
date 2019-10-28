@@ -80,3 +80,13 @@ class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBuffe
         val initialSet = 129834765L
     }
 }
+
+class MisalignedShortArray: BaseLMDBObject<MisalignedShortArray>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var single: Byte by db
+    var zArray: ShortArray by db
+}
