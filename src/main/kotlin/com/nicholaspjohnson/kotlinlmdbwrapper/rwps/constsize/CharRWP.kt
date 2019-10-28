@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import java.nio.ByteBuffer
 
 /**
@@ -19,12 +20,16 @@ class CharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) :
     /**
      * Helper methods.
      */
-    companion object {
+    companion object: RWPCompanion<CharRWP<*>, Char?> {
+        override fun compReadFn(buffer: ByteBuffer, offset: Int): Char? = buffer.getChar(offset)
+
+        override fun compSizeFn(item: Char?): Int = Char.SIZE_BYTES
+
         /**
-         * Writes the non-null [value] to [buffer] at [offset].
+         * Writes the non-null [item] to [buffer] at [offset].
          */
-        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Char?) {
-            buffer.putChar(offset, value!!)
+        override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Char?) {
+            buffer.putChar(offset, item!!)
         }
     }
 }

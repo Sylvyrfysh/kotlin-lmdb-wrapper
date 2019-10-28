@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import java.nio.ByteBuffer
 
 /**
@@ -19,12 +20,16 @@ class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) 
     /**
      * Helper methods.
      */
-    companion object {
+    companion object: RWPCompanion<FloatRWP<*>, Float?> {
+        override fun compReadFn(buffer: ByteBuffer, offset: Int): Float? = buffer.getFloat(offset)
+
+        override fun compSizeFn(item: Float?): Int = java.lang.Float.BYTES
+
         /**
-         * Writes the non-null [value] to [buffer] at [offset].
+         * Writes the non-null [item] to [buffer] at [offset].
          */
-        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Float?) {
-            buffer.putFloat(offset, value!!)
+        override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Float?) {
+            buffer.putFloat(offset, item!!)
         }
     }
 }
