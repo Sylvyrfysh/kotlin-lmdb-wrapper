@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import java.nio.ByteBuffer
 
 /**
@@ -10,7 +11,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class ByteRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Byte?>(obj, name) {
+class ByteRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Byte?>(obj, nullable) {
     override val itemSize: Int = 1
     override val readFn: (ByteBuffer, Int) -> Byte? = ByteBuffer::get
     override val writeFn: (ByteBuffer, Int, Byte?) -> Unit =
@@ -19,12 +20,16 @@ class ByteRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : Cons
     /**
      * Helper methods.
      */
-    companion object {
+    companion object: RWPCompanion<ByteRWP<*>, Byte?> {
+        override fun compReadFn(buffer: ByteBuffer, offset: Int): Byte? = buffer.get(offset)
+
+        override fun compSizeFn(item: Byte?): Int = 1
+
         /**
-         * Writes the non-null [value] to [buffer] at [offset].
+         * Writes the non-null [item] to [buffer] at [offset].
          */
-        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Byte?) {
-            buffer.put(offset, value!!)
+        override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Byte?) {
+            buffer.put(offset, item!!)
         }
     }
 }

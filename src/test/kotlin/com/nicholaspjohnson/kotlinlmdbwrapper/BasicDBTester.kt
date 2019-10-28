@@ -222,4 +222,22 @@ object BasicDBTester {
 
         assertArrayEquals(expectArray, readObj.zArray)
     }
+
+    @Test
+    fun `Test list basics`() {
+        val methodKey = nextID.toLong()
+        val expectList = arrayListOf("Why", "like", "This? IDK")
+
+        val listObj = ListTester()
+        listObj.key = methodKey
+        listObj.list = expectList
+
+        listObj.writeInSingleTX(env, dbi)
+
+        val listObj2 = ListTester()
+        listObj2.key = methodKey
+        listObj2.readFromDB(env, dbi)
+
+        assertLinesMatch(expectList, listObj2.list)
+    }
 }

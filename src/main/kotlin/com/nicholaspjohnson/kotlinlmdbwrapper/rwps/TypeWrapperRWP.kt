@@ -5,8 +5,8 @@ import java.nio.ByteBuffer
 import kotlin.reflect.KProperty
 
 @Suppress("UNCHECKED_CAST")
-class TypeWrapperRWP<M: BaseLMDBObject<M>, R, D>(private val underlying: AbstractRWP<M, D?>, private val fromDBToObj: (D) -> R, private val fromObjToDB: (R) -> D, lmdbObject: BaseLMDBObject<M>, propertyName: String) :
-    AbstractRWP<M, R>(lmdbObject, propertyName) {
+class TypeWrapperRWP<M: BaseLMDBObject<M>, R, D>(private val underlying: AbstractRWP<M, D?>, private val fromDBToObj: (D) -> R, private val fromObjToDB: (R) -> D, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+    AbstractRWP<M, R>(lmdbObject, nullable) {
     override val getSize: (R) -> Int = underlying.getSize as (R) -> Int
 
     override fun writeToDB(writeBuffer: ByteBuffer, startingOffset: Int): Int {

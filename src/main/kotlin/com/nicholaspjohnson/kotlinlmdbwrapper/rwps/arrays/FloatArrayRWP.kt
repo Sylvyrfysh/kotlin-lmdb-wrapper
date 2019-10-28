@@ -4,7 +4,7 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import java.nio.ByteBuffer
 
-class FloatArrayRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String): VarSizeRWP<M, FloatArray?>(lmdbObject, propertyName) {
+class FloatArrayRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean): VarSizeRWP<M, FloatArray?>(lmdbObject, nullable) {
     override val readFn: (ByteBuffer, Int) -> FloatArray = ::compReadFn
     override val writeFn: (ByteBuffer, Int, FloatArray?) -> Any? = ::compWriteFn
     override val getItemOnlySize: (FloatArray?) -> Int = ::compSizeFn

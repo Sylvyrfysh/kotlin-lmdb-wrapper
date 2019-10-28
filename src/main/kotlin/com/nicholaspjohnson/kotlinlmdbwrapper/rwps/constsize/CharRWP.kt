@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class CharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Char?>(obj, name) {
+class CharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Char?>(obj, nullable) {
     override val itemSize: Int = 2
     override val readFn: (ByteBuffer, Int) -> Char? = ByteBuffer::getChar
     override val writeFn: (ByteBuffer, Int, Char?) -> Unit =

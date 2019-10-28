@@ -90,3 +90,12 @@ class MisalignedShortArray: BaseLMDBObject<MisalignedShortArray>(ObjectBufferTyp
     var single: Byte by db
     var zArray: ShortArray by db
 }
+
+class ListTester: BaseLMDBObject<ListTester>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var list: ArrayList<String> by db.list(this::list) { ArrayList() }
+}

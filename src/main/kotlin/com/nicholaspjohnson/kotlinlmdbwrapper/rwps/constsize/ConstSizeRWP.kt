@@ -11,8 +11,8 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP].
  */
-abstract class ConstSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, propertyName: String) :
-    AbstractRWP<M, R>(lmdbObject, propertyName) {
+abstract class ConstSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+    AbstractRWP<M, R>(lmdbObject, nullable) {
     /**
      * The constant size of this item.
      */

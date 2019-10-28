@@ -14,8 +14,8 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP].
  */
-abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, propertyName: String) :
-    AbstractRWP<M, R>(lmdbObject, propertyName) {
+abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+    AbstractRWP<M, R>(lmdbObject, nullable) {
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
      */

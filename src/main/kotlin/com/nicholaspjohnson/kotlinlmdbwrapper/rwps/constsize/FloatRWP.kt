@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Float?>(obj, name) {
+class FloatRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Float?>(obj, nullable) {
     override val itemSize: Int = java.lang.Float.BYTES
     override val readFn: (ByteBuffer, Int) -> Float? = ByteBuffer::getFloat
     override val writeFn: (ByteBuffer, Int, Float?) -> Unit =

@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class DoubleRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Double?>(obj, name) {
+class DoubleRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Double?>(obj, nullable) {
     override val itemSize: Int = java.lang.Double.BYTES
     override val readFn: (ByteBuffer, Int) -> Double? = ByteBuffer::getDouble
     override val writeFn: (ByteBuffer, Int, Double?) -> Unit =

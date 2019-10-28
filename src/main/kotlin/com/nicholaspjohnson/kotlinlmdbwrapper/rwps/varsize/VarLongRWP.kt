@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.*
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import java.nio.ByteBuffer
 
 /**
@@ -11,7 +12,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [VarSizeRWP],
  */
-class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : VarSizeRWP<M, Long?>(obj, name) {
+class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : VarSizeRWP<M, Long?>(obj, nullable) {
     override val readFn: (ByteBuffer, Int) -> Long = ByteBuffer::readVarLong
     override val writeFn: (ByteBuffer, Int, Long?) -> Any? =
         Companion::compWriteFn
@@ -21,18 +22,20 @@ class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : V
     /**
      * Helper methods.
      */
-    companion object {
+    companion object: RWPCompanion<VarLongRWP<*>, Long?> {
+        override fun compReadFn(buffer: ByteBuffer, offset: Int): Long? = buffer.readVarLong(offset)
+
         /**
          * Reads and returns the non-null value in [buffer] at [offset].
          */
-        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Long?) {
-            buffer.writeVarLong(offset, value!!)
+        override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Long?) {
+            buffer.writeVarLong(offset, item!!)
         }
 
         /**
          * Returns the raw size of [item] when encoded as a varlong.
          */
-        private fun compSizeFn(item: Long?): Int {
+        override fun compSizeFn(item: Long?): Int {
             return item!!.getVarLongSize()
         }
     }

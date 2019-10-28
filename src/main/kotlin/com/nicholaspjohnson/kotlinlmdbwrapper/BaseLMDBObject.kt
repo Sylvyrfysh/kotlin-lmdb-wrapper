@@ -213,25 +213,4 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             mdb_txn_abort(txn)
         }
     }
-
-    /**
-     * Helper function to turn [name] into the underlying index for a property.
-     * Returns the index [name] is at.
-     */
-    fun getInd(name: String): Int {
-        if (!isInit) {
-            setUsed()
-        }
-        return nameToInts[name] ?: error("Name $name is not present")
-    }
-
-    /**
-     * Returns whether or not the object at [index] is nullable.
-     */
-    fun getIsNullable(index: Int): Boolean {
-        if (!isInit) {
-            setUsed()
-        }
-        return nullables[index]
-    }
 }

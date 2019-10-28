@@ -10,23 +10,12 @@ import kotlin.reflect.KProperty
  * A base delegate for a RWP that will get [index] through [lmdbObject] and [propertyName]
  *
  * @param[lmdbObject] Class of type [M] to operate on
- * @param[propertyName] The property name to give an RWP for
  *
  * @constructor
  * Set up the RWP with the passed in with the underlying object [lmdbObject] and the property name [propertyName]
  *
  */
-abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: BaseLMDBObject<M>, private val propertyName: String) : RWPInterface<M> {
-    /**
-     * Evaluates the index on first get.
-     */
-    private val index by lazy { lmdbObject.getInd(propertyName) }
-
-    /**
-     * Whether or not this RWP can contain a null value
-     */
-    private val nullable by lazy { lmdbObject.getIsNullable(index) }
-
+abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: BaseLMDBObject<M>, private val nullable: Boolean) : RWPInterface<M> {
     /**
      * Evaluates the index on first get.
      */

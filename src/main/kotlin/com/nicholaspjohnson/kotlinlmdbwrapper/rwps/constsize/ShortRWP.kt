@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
  */
-class ShortRWP<M : BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, name: String) : ConstSizeRWP<M, Short?>(obj, name) {
+class ShortRWP<M : BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Short?>(obj, nullable) {
     override val itemSize: Int = Short.SIZE_BYTES
     override val readFn: (ByteBuffer, Int) -> Short? = ByteBuffer::getShort
     override val writeFn: (ByteBuffer, Int, Short?) -> Unit =

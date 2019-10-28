@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import java.nio.ByteBuffer
 
 /**
@@ -8,9 +9,9 @@ import java.nio.ByteBuffer
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
+ * Passes [lmdbObject] and [nullable] to the underlying [ConstSizeRWP]
  */
-class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName: String) : ConstSizeRWP<M, Boolean?>(lmdbObject, propertyName) {
+class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Boolean?>(lmdbObject, nullable) {
     override val itemSize: Int = 1
     override val readFn: (ByteBuffer, Int) -> Boolean =
         Companion::compReadFn
@@ -20,18 +21,20 @@ class BoolRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, propertyName:
     /**
      * Helper methods.
      */
-    companion object {
+    companion object: RWPCompanion<BoolRWP<*>, Boolean?> {
+        override fun compSizeFn(item: Boolean?): Int = 1
+
         /**
-         * Writes the non-null [value] to [buffer] at [offset].
+         * Writes the non-null [item] to [buffer] at [offset].
          */
-        private fun compWriteFn(buffer: ByteBuffer, offset: Int, value: Boolean?) {
-            buffer.put(offset, if (value!!) 1.toByte() else 0.toByte())
+        override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Boolean?) {
+            buffer.put(offset, if (item!!) 1.toByte() else 0.toByte())
         }
 
         /**
          * Reads and returns the non-null value from [buffer] at [offset].
          */
-        private fun compReadFn(buffer: ByteBuffer, offset: Int): Boolean {
+        override fun compReadFn(buffer: ByteBuffer, offset: Int): Boolean {
             return buffer.get(offset) != 0.toByte()
         }
     }
