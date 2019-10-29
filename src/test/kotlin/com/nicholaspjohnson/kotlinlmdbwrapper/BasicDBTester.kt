@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -9,8 +10,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.util.lmdb.LMDB
+import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.*
+import kotlin.reflect.KClass
 
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
@@ -239,5 +243,25 @@ object BasicDBTester {
         listObj2.readFromDB(env, dbi)
 
         assertLinesMatch(expectList, listObj2.list)
+    }
+
+    @Test
+    fun `Test custom RWP`() {
+        assertThrows<IllegalStateException>("There is no RWP for the type UUID!") { CustomUUIDRWP() }
+
+        val methodKey = nextID.toLong()
+        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class as KClass<AbstractRWP<*, *>>)
+        val expectUUID = UUID.randomUUID()
+
+        val customRWPObject = CustomUUIDRWP()
+        customRWPObject.key = methodKey
+        customRWPObject.uuid = expectUUID
+        customRWPObject.writeInSingleTX(env, dbi)
+
+        val cObj2 = CustomUUIDRWP()
+        cObj2.key = methodKey
+        cObj2.readFromDB(env, dbi)
+
+        assertEquals(expectUUID, cObj2.uuid)
     }
 }

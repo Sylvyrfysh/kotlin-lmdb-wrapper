@@ -1,6 +1,8 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import java.nio.ByteBuffer
+import java.util.*
+import kotlin.collections.ArrayList
 
 class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
@@ -98,4 +100,13 @@ class ListTester: BaseLMDBObject<ListTester>(ObjectBufferType.None) {
 
     var key: Long by db
     var list: ArrayList<String> by db.list(this::list) { ArrayList() }
+}
+
+class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var uuid: UUID by db
 }

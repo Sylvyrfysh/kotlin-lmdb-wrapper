@@ -38,35 +38,37 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
     }
 
     @PublishedApi
-    internal fun getRWPClass(type: KClassifier?, annotations: List<Annotation>?): KClass<AbstractRWP<M, *>> = when (type) {
-        Boolean::class -> BoolRWP::class
-        Byte::class -> ByteRWP::class
-        Short::class -> ShortRWP::class
-        Char::class -> CharRWP::class
-        Int::class -> IntRWP::class
-        Float::class -> FloatRWP::class
-        Long::class -> {
-            if (annotations?.filterIsInstance<VarLong>()?.isNotEmpty() == true) {
-                VarLongRWP::class
-            } else {
-                LongRWP::class
+    internal fun getRWPClass(type: KClassifier?, annotations: List<Annotation>?): KClass<AbstractRWP<M, *>> {
+        require(type != null) { "The given type must not be null!" }
+        return when (type) {
+            Boolean::class -> BoolRWP::class
+            Byte::class -> ByteRWP::class
+            Short::class -> ShortRWP::class
+            Char::class -> CharRWP::class
+            Int::class -> IntRWP::class
+            Float::class -> FloatRWP::class
+            Long::class -> {
+                if (annotations?.filterIsInstance<VarLong>()?.isNotEmpty() == true) {
+                    VarLongRWP::class
+                } else {
+                    LongRWP::class
+                }
             }
-        }
-        Double::class -> DoubleRWP::class
-        String::class -> {
-            VarCharRWP::class
-        }
-        BooleanArray::class -> BoolArrayRWP::class
-        ByteArray::class -> ByteArrayRWP::class
-        CharArray::class -> CharArrayRWP::class
-        DoubleArray::class -> DoubleArrayRWP::class
-        FloatArray::class -> FloatArrayRWP::class
-        IntArray::class -> IntArrayRWP::class
-        LongArray::class -> LongArrayRWP::class
-        ShortArray::class -> ShortArrayRWP::class
-        List::class -> error("Use db.list!")
-        else -> error("New type no impl $type")
-    } as KClass<AbstractRWP<M, *>>
+            Double::class -> DoubleRWP::class
+            String::class -> VarCharRWP::class
+            BooleanArray::class -> BoolArrayRWP::class
+            ByteArray::class -> ByteArrayRWP::class
+            CharArray::class -> CharArrayRWP::class
+            DoubleArray::class -> DoubleArrayRWP::class
+            FloatArray::class -> FloatArrayRWP::class
+            IntArray::class -> IntArrayRWP::class
+            LongArray::class -> LongArrayRWP::class
+            ShortArray::class -> ShortArrayRWP::class
+            in extraRWPS -> extraRWPS.getValue(type)
+            List::class -> error("Use db.list!")
+            else -> error("There is no RWP for the type $type!")
+        } as KClass<AbstractRWP<M, *>>
+    }
 
     inline fun <reified DBType, reified ObjectType> custom(
         fromDBToObj: KFunction1<DBType, ObjectType>,
@@ -86,5 +88,14 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val rwp = ListRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
+    }
+
+    companion object {
+        private val extraRWPS = HashMap<KClassifier?, KClass<AbstractRWP<*, *>>>()
+
+        fun addRWP(typeFor: KClassifier?, rwpClass: KClass<AbstractRWP<*, *>>) {
+            require(typeFor != null) { "The given type must not be null!" }
+            extraRWPS[typeFor] = rwpClass
+        }
     }
 }
