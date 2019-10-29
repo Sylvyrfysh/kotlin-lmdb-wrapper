@@ -10,6 +10,7 @@ annotation class VarLong
  *
  * @property maxLength the max length of the VarChar
  */
+@Deprecated("This is no longer applicable and does nothing.")
 annotation class VarChar(val maxLength: Int)
 
 /**
