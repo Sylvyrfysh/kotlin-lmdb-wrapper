@@ -91,9 +91,9 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
     }
 
     companion object {
-        private val extraRWPS = HashMap<KClassifier?, KClass<AbstractRWP<*, *>>>()
+        private val extraRWPS = HashMap<KClassifier?, KClass<out AbstractRWP<*, *>>>()
 
-        fun addRWP(typeFor: KClassifier?, rwpClass: KClass<AbstractRWP<*, *>>) {
+        fun addRWP(typeFor: KClassifier?, rwpClass: KClass<out AbstractRWP<*, *>>) {
             require(typeFor != null) { "The given type must not be null!" }
             extraRWPS[typeFor] = rwpClass
         }

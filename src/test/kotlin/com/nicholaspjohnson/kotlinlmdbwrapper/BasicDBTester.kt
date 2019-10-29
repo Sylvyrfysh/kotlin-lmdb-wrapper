@@ -250,7 +250,7 @@ object BasicDBTester {
         assertThrows<IllegalStateException>("There is no RWP for the type UUID!") { CustomUUIDRWP() }
 
         val methodKey = nextID.toLong()
-        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class as KClass<AbstractRWP<*, *>>)
+        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class)
         val expectUUID = UUID.randomUUID()
 
         val customRWPObject = CustomUUIDRWP()
