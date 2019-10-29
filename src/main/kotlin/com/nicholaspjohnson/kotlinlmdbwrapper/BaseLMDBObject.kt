@@ -131,6 +131,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      */
     protected val db by lazy { LMDBBaseObjectProvider(this) }
 
+    open fun keySize(): Int = 8
+
     /**
      * Returns a key that fits in the [keyBuffer]
      */
@@ -145,7 +147,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             setUsed()
         }
         stackPush().use { stack ->
-            val key = stack.malloc(8)
+            val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
@@ -186,7 +188,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             setUsed()
         }
         stackPush().use { stack ->
-            val key = stack.malloc(8)
+            val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
