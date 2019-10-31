@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.nicholaspjohnson"
-version = "0.2.0-dev-local"
+version = "0.2.0-dev"
 
 repositories {
     jcenter()
@@ -40,6 +40,7 @@ dependencies {
     for (lwjgl in listOf("", "lmdb", "jemalloc")) {
         val actName = "lwjgl${if (lwjgl.isEmpty()) lwjgl else "-$lwjgl"}"
         implementation("org.lwjgl", actName)
+        runtimeClasspath("org.lwjgl", actName, classifier = lwjglNatives)
         testRuntimeOnly("org.lwjgl", actName, classifier = lwjglNatives)
     }
 
