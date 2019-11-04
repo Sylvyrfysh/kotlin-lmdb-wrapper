@@ -8,10 +8,10 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 
-class ListRWP<M: BaseLMDBObject<M>, R, F: List<R>>(private val newListInstance: () -> MutableList<R>, private val itemCompanion: RWPCompanion<*, R>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
-    VarSizeRWP<M, F>(lmdbObject, nullable) {
+class ListRWP<M: BaseLMDBObject<M>, ItemType, ListType: List<ItemType>>(private val newListInstance: () -> MutableList<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+    VarSizeRWP<M, ListType>(lmdbObject, nullable) {
     @Suppress("UNCHECKED_CAST")
-    override val readFn: (ByteBuffer, Int) -> F = { buffer, offset ->
+    override val readFn: (ByteBuffer, Int) -> ListType = { buffer, offset ->
         val numItems = buffer.readVarLong(offset)
 
         var off = offset + numItems.getVarLongSize()
@@ -28,10 +28,10 @@ class ListRWP<M: BaseLMDBObject<M>, R, F: List<R>>(private val newListInstance: 
         }
         buffer.position(0)
 
-        ret as F
+        ret as ListType
     }
 
-    override val writeFn: (ByteBuffer, Int, F) -> Any? = { byteBuffer: ByteBuffer, i: Int, f: F ->
+    override val writeFn: (ByteBuffer, Int, ListType) -> Any? = { byteBuffer: ByteBuffer, i: Int, f: ListType ->
         val items = field!!.size.toLong()
         val itemsLen = items.getVarLongSize()
         byteBuffer.writeVarLong(i, items)
@@ -46,7 +46,7 @@ class ListRWP<M: BaseLMDBObject<M>, R, F: List<R>>(private val newListInstance: 
         }
     }
 
-    override val getItemOnlySize: (F) -> Int = { list ->
+    override val getItemOnlySize: (ListType) -> Int = { list ->
         list.size.toLong().getVarLongSize() + list.map(itemCompanion::compSizeFn).sum() + list.map(itemCompanion::compSizeFn).map(Int::toLong).map(Long::getVarLongSize).sum()
     }
 }

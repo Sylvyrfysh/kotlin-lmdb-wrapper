@@ -62,6 +62,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
+    /**
+     * If this object has not yet been used, initialize the buffer and set the initialized flag.
+     */
     internal fun setUsed() {
         if (!isInit) {
             setTypes()
@@ -131,6 +134,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      */
     protected val db by lazy { LMDBBaseObjectProvider(this) }
 
+    /**
+     * Returns the key size for this object. Defaults to 8.
+     */
     open fun keySize(): Int = 8
 
     /**
@@ -213,6 +219,12 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
             initBuffers(dv.mv_data()!!)
             mdb_txn_abort(txn)
+        }
+    }
+
+    companion object {
+        fun <M: BaseLMDBObject<M>> getAllWithSingleKey(): List<M> {
+            TODO()
         }
     }
 }

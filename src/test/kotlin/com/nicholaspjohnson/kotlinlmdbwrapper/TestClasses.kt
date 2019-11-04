@@ -3,6 +3,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
@@ -79,7 +80,7 @@ class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBuffe
     }
 
     companion object {
-        val initialSet = 129834765L
+        const val initialSet = 129834765L
     }
 }
 
@@ -109,4 +110,13 @@ class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(ObjectBufferType.None) {
 
     var key: Long by db
     var uuid: UUID by db
+}
+
+class MapTester: BaseLMDBObject<MapTester>(ObjectBufferType.None) {
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var map: HashMap<String, Int> by db.map(this::map) { HashMap() }
 }

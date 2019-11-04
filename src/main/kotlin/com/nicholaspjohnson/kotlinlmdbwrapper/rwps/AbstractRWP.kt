@@ -7,12 +7,12 @@ import kotlin.experimental.or
 import kotlin.reflect.KProperty
 
 /**
- * A base delegate for a RWP that will get [index] through [lmdbObject] and [propertyName]
+ * An RWP that writes to DB for type [R] that is [nullable].
  *
  * @param[lmdbObject] Class of type [M] to operate on
  *
  * @constructor
- * Set up the RWP with the passed in with the underlying object [lmdbObject] and the property name [propertyName]
+ * Set up the RWP with the passed in with the underlying object [lmdbObject] that is [nullable].
  *
  */
 abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: BaseLMDBObject<M>, private val nullable: Boolean) : RWPInterface<M> {

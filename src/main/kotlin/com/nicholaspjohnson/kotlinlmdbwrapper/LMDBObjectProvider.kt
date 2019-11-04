@@ -4,12 +4,12 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.list.ListRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map.MapRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KClassifier
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty
-import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.companionObjectInstance
 
 /**
@@ -84,15 +84,40 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         prop: KProperty<ListType>,
         noinline newListFn: () -> MutableList<ItemType>
     ): ListRWP<M, ItemType, List<ItemType>> {
-        val underlyingCompanion = getRWPClass(ItemType::class, null).companionObjectInstance as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
+        val underlyingCompanionObj = getRWPClass(ItemType::class, null).companionObjectInstance
+        checkNotNull(underlyingCompanionObj) { "The underlying class does not have a companion object the list can work through!" }
+        val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
         val rwp = ListRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
     }
 
+    inline fun <reified KeyType, reified DataType, reified MapType: Map<KeyType, DataType>> map(
+        prop: KProperty<MapType>,
+        noinline newMapFn: () -> MutableMap<KeyType, DataType>
+    ): MapRWP<M, KeyType, DataType, Map<KeyType, DataType>> {
+        val underlyingKeyCompanionObj = getRWPClass(KeyType::class, null).companionObjectInstance
+        checkNotNull(underlyingKeyCompanionObj) { "The underlying key class does not have a companion object the map can work through!" }
+        val underlyingKeyCompanion = underlyingKeyCompanionObj as RWPCompanion<AbstractRWP<*, KeyType>, KeyType>
+
+        val underlyingDataCompanionObj = getRWPClass(DataType::class, null).companionObjectInstance
+        checkNotNull(underlyingDataCompanionObj) { "The underlying data class does not have a companion object the map can work through!" }
+        val underlyingDataCompanion = underlyingDataCompanionObj as RWPCompanion<AbstractRWP<*, DataType>, DataType>
+
+        val rwp = MapRWP(newMapFn, underlyingKeyCompanion, underlyingDataCompanion, obj, prop.returnType.isMarkedNullable)
+        obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
+        return rwp
+    }
+
+    /**
+     * Utilities to use related to user-specified RWPs
+     */
     companion object {
         private val extraRWPS = HashMap<KClassifier?, KClass<out AbstractRWP<*, *>>>()
 
+        /**
+         * Adds a user-specified RWP of the class [rwpClass] for types of [typeFor].
+         */
         fun addRWP(typeFor: KClassifier?, rwpClass: KClass<out AbstractRWP<*, *>>) {
             require(typeFor != null) { "The given type must not be null!" }
             extraRWPS[typeFor] = rwpClass

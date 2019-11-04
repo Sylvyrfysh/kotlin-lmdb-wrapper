@@ -1,7 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -14,7 +13,6 @@ import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import kotlin.reflect.KClass
 
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
@@ -263,5 +261,23 @@ object BasicDBTester {
         cObj2.readFromDB(env, dbi)
 
         assertEquals(expectUUID, cObj2.uuid)
+    }
+
+    @Test
+    fun `Test map basics`() {
+        val methodKey = nextID.toLong()
+        val expectMap = hashMapOf("this" to -1, "is" to 42, "a" to 0, "test" to Int.MAX_VALUE)
+
+        val testObj = MapTester()
+        testObj.key = methodKey
+        testObj.map = expectMap
+
+        testObj.writeInSingleTX(env, dbi)
+
+        val mapObj2 = MapTester()
+        mapObj2.key = methodKey
+        mapObj2.readFromDB(env, dbi)
+
+        assertEquals(expectMap, mapObj2.map)
     }
 }
