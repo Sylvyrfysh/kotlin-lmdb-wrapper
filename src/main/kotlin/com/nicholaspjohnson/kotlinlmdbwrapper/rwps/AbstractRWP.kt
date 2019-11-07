@@ -17,7 +17,7 @@ import kotlin.reflect.KProperty
  */
 abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: BaseLMDBObject<M>, private val nullable: Boolean) : RWPInterface<M> {
     /**
-     * Evaluates the index on first get.
+     * Backing RWP for this field
      */
     protected var field: R? = null
 
