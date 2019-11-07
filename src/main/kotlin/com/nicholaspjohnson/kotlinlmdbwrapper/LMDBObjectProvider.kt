@@ -3,7 +3,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.list.ListRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.list.CollectionRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map.MapRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.KClass
@@ -80,14 +80,14 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         return TypeWrapperRWP(d1 as AbstractRWP<M, DBType?>, fromDBToObj, fromObjToDB, obj, prop.returnType.isMarkedNullable)
     }
 
-    inline fun <reified ItemType, reified ListType: List<ItemType>> list(
-        prop: KProperty<ListType>,
-        noinline newListFn: () -> MutableList<ItemType>
-    ): ListRWP<M, ItemType, List<ItemType>> {
+    inline fun <reified ItemType, reified CollectionType: List<ItemType>> collection(
+        prop: KProperty<CollectionType>,
+        noinline newListFn: () -> MutableCollection<ItemType>
+    ): CollectionRWP<M, ItemType, Collection<ItemType>> {
         val underlyingCompanionObj = getRWPClass(ItemType::class, null).companionObjectInstance
         checkNotNull(underlyingCompanionObj) { "The underlying class does not have a companion object the list can work through!" }
         val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
-        val rwp = ListRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
+        val rwp = CollectionRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
     }

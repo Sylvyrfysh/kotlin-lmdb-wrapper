@@ -100,7 +100,7 @@ class ListTester: BaseLMDBObject<ListTester>(ObjectBufferType.None) {
     }
 
     var key: Long by db
-    var list: ArrayList<String> by db.list(this::list) { ArrayList() }
+    var list: ArrayList<String> by db.collection(this::list) { ArrayList() }
 }
 
 class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(ObjectBufferType.None) {

@@ -8,14 +8,14 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 
-class ListRWP<M: BaseLMDBObject<M>, ItemType, ListType: List<ItemType>>(private val newListInstance: () -> MutableList<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
-    VarSizeRWP<M, ListType>(lmdbObject, nullable) {
+class CollectionRWP<M: BaseLMDBObject<M>, ItemType, CollectionType: Collection<ItemType>>(private val newCollectionInstance: () -> MutableCollection<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+    VarSizeRWP<M, CollectionType>(lmdbObject, nullable) {
     @Suppress("UNCHECKED_CAST")
-    override val readFn: (ByteBuffer, Int) -> ListType = { buffer, offset ->
+    override val readFn: (ByteBuffer, Int) -> CollectionType = { buffer, offset ->
         val numItems = buffer.readVarLong(offset)
 
         var off = offset + numItems.getVarLongSize()
-        val ret = newListInstance()
+        val ret = newCollectionInstance()
         repeat(numItems.toInt()) {
             val len = buffer.readVarLong(off)
             off += len.getVarLongSize()
@@ -28,10 +28,10 @@ class ListRWP<M: BaseLMDBObject<M>, ItemType, ListType: List<ItemType>>(private 
         }
         buffer.position(0)
 
-        ret as ListType
+        ret as CollectionType
     }
 
-    override val writeFn: (ByteBuffer, Int, ListType) -> Any? = { byteBuffer: ByteBuffer, i: Int, f: ListType ->
+    override val writeFn: (ByteBuffer, Int, CollectionType) -> Any? = { byteBuffer: ByteBuffer, i: Int, f: CollectionType ->
         val items = field!!.size.toLong()
         val itemsLen = items.getVarLongSize()
         byteBuffer.writeVarLong(i, items)
@@ -46,7 +46,7 @@ class ListRWP<M: BaseLMDBObject<M>, ItemType, ListType: List<ItemType>>(private 
         }
     }
 
-    override val getItemOnlySize: (ListType) -> Int = { list ->
+    override val getItemOnlySize: (CollectionType) -> Int = { list ->
         list.size.toLong().getVarLongSize() + list.map(itemCompanion::compSizeFn).sum() + list.map(itemCompanion::compSizeFn).map(Int::toLong).map(Long::getVarLongSize).sum()
     }
 }
