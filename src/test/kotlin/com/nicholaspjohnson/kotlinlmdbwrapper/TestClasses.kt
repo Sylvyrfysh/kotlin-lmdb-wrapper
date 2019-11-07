@@ -29,7 +29,6 @@ class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.None) {
     var double: Double by db
     @VarLong
     var varlong: Long by db
-    @VarChar(100)
     var varchar: String by db
 }
 
@@ -40,9 +39,7 @@ class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.None) {
 
     var normInt: Int by db
     var nullableInt: Int? by db
-    @VarChar(100)
     var aNullableString: String? by db
-    @VarChar(100)
     var normalString: String by db
 }
 
