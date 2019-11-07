@@ -224,6 +224,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
+    /**
+     * Based on the key provided by [keyFunc], attempts to delete this item.
+     * If the key does not exist, a [DataNotFoundException] will be thrown.
+     */
     fun delete(env: Long, dbi: Int) {
         if (!isInit) {
             setUsed()
@@ -238,7 +242,22 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
             val txn = pp.get(0)
 
-            val err = mdb_del(txn, dbi, kv, null)
+            val flags = stack.mallocInt(1)
+            LMDB_CHECK(mdb_dbi_flags(txn, dbi, flags))
+
+            val data = if ((flags.get(0) and MDB_DUPSORT) == MDB_DUPSORT) {
+                val dv = MDBVal.callocStack(stack).mv_data(stack.malloc(size))
+                dv.mv_size(size.toLong())
+                var off = 0
+                for (i in rwpsOrdered) {
+                    off += i.writeToDB(dv.mv_data()!!, off)
+                }
+                dv
+            } else {
+                null
+            }
+
+            val err = mdb_del(txn, dbi, kv, data)
             if (err == MDB_NOTFOUND) {
                 mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
