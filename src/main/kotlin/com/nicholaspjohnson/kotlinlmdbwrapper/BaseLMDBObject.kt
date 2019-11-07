@@ -122,11 +122,12 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     /**
      * Initialize the value of the object backed by [kProperty] to [item].
      */
-    protected fun <T> set(kProperty: KProperty0<T?>, item: T?) {
+    protected fun <T> set(kProperty: KProperty0<T>, item: T) {
+        val oldAccessible = kProperty.isAccessible
         kProperty.isAccessible = true
         @Suppress("UNCHECKED_CAST")
-        (kProperty.getDelegate() as AbstractRWP<M, T?>).setValue(this, kProperty, item)
-        kProperty.isAccessible = false
+        (kProperty.getDelegate() as AbstractRWP<M, T>).setValue(this, kProperty, item)
+        kProperty.isAccessible = oldAccessible
     }
 
     /**
@@ -223,8 +224,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     }
 
     companion object {
-        fun <M: BaseLMDBObject<M>> getAllWithSingleKey(): List<M> {
-            TODO()
-        }
+
     }
 }
