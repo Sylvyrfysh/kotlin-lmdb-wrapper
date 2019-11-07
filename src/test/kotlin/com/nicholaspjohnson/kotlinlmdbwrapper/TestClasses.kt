@@ -6,6 +6,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
+    constructor(): this(ObjectBufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key.toLong())
     }
@@ -81,7 +82,8 @@ class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBuffe
     }
 }
 
-class MisalignedShortArray: BaseLMDBObject<MisalignedShortArray>(ObjectBufferType.None) {
+class MisalignedShortArray(from: ObjectBufferType): BaseLMDBObject<MisalignedShortArray>(from) {
+    constructor(): this(ObjectBufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -91,7 +93,8 @@ class MisalignedShortArray: BaseLMDBObject<MisalignedShortArray>(ObjectBufferTyp
     var zArray: ShortArray by db
 }
 
-class ListTester: BaseLMDBObject<ListTester>(ObjectBufferType.None) {
+class ListTester(from: ObjectBufferType): BaseLMDBObject<ListTester>(from) {
+    constructor(): this(ObjectBufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }

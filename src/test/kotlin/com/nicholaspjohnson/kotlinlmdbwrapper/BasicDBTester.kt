@@ -19,6 +19,9 @@ object BasicDBTester {
 
     private var env: Long = 0L
     private var dbi: Int = 0
+    private var multiGetDbi: Int = 0
+    private var multiGetDbi2: Int = 0
+    private var multiGetDbi3: Int = 0
     private val testObj1 = TestObj(ObjectBufferType.None)
 
     private var nextID: Int = 2
@@ -38,13 +41,22 @@ object BasicDBTester {
         LMDB_CHECK(
             LMDB.mdb_env_open(
                 env,
-                Paths.get("db").apply { Files.createDirectories(this) }.toAbsolutePath().toString(),
+                Paths.get("db").apply {
+                    if (Files.exists(this)) {
+                        Files.list(this).forEach(Files::delete)
+                    } else {
+                        Files.createDirectories(this)
+                    }
+                }.toAbsolutePath().toString(),
                 0,
                 436
             )
         )
 
         dbi = openDatabase(env, "base")
+        multiGetDbi = openDatabase(env, "multiget")
+        multiGetDbi2 = openDatabase(env, "multiget2")
+        multiGetDbi3 = openDatabase(env, "multiget3")
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -279,5 +291,75 @@ object BasicDBTester {
         mapObj2.readFromDB(env, dbi)
 
         assertEquals(expectMap, mapObj2.map)
+    }
+
+    @Test
+    fun `Test get by not key`() {
+        val key1 = nextID.toLong()
+        val key2 = nextID.toLong()
+        val key3 = nextID.toLong()
+
+        val m1 = MisalignedShortArray()
+        m1.key = key1
+        m1.single = 56.toByte()
+        m1.zArray = ShortArray(1)
+        m1.writeInSingleTX(env, multiGetDbi)
+        val m2 = MisalignedShortArray()
+        m2.key = key2
+        m2.single = 57.toByte()
+        m2.zArray = ShortArray(2)
+        m2.writeInSingleTX(env, multiGetDbi)
+        val m3 = MisalignedShortArray()
+        m3.key = key3
+        m3.single = 58.toByte()
+        m3.zArray = ShortArray(3)
+        m3.writeInSingleTX(env, multiGetDbi)
+
+        val expectM2 = BaseLMDBObject.getObjectWithValue(env, multiGetDbi, MisalignedShortArray::single, 57.toByte())
+        assertNotNull(expectM2)
+        assertEquals(2, expectM2!!.zArray.size)
+    }
+
+    @Test
+    fun `Get with custom equality`() {
+        val key1 = nextID.toLong()
+        val key2 = nextID.toLong()
+
+        val eqCheck = "This is my custom eq check string!"
+
+        val l1 = ListTester()
+        l1.key = key1
+        l1.list = arrayListOf("Strings!", "Cause why not!", eqCheck)
+        l1.writeInSingleTX(env, multiGetDbi2)
+        val l2 = ListTester()
+        l2.key = key2
+        l2.list = arrayListOf("Strings Extra!", "Cause why not though!", "Another for good measure!")
+        l2.writeInSingleTX(env, multiGetDbi2)
+
+        val obj = BaseLMDBObject.getObjectWithEquality(env, multiGetDbi2, ListTester::list, eqCheck, ArrayList<String>::contains)
+        assertNotNull(obj)
+        assertEquals(key1, obj!!.key)
+
+        val obj2 = BaseLMDBObject.getObjectWithEquality(env, multiGetDbi2, ListTester::list, "Something that doesn't show up", ArrayList<String>::contains)
+        assertNull(obj2)
+    }
+
+    @Test
+    fun `Add find remove no find`() {
+        val key1 = nextID
+        val dataItem = 12345
+
+        assertFalse(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
+
+        val obj1 = TestObj()
+        obj1.key = key1
+        obj1.data = 12345
+        obj1.writeInSingleTX(env, multiGetDbi3)
+
+        assertTrue(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
+
+        obj1.delete(env, multiGetDbi3)
+
+        assertFalse(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
     }
 }
