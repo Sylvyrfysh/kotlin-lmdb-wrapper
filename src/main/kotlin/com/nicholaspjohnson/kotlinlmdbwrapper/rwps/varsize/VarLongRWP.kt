@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [VarSizeRWP],
+ * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP],
  */
 class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : VarSizeRWP<M, Long?>(obj, nullable) {
     override val readFn: (ByteBuffer, Int) -> Long = ByteBuffer::readVarLong
@@ -23,10 +23,13 @@ class VarLongRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean
      * Helper methods.
      */
     companion object: RWPCompanion<VarLongRWP<*>, Long?> {
+        /**
+        * Reads and returns the non-null value in [buffer] at [offset].
+        */
         override fun compReadFn(buffer: ByteBuffer, offset: Int): Long? = buffer.readVarLong(offset)
 
         /**
-         * Reads and returns the non-null value in [buffer] at [offset].
+         * Writes non-null [item] to [buffer] at [offset].
          */
         override fun compWriteFn(buffer: ByteBuffer, offset: Int, item: Long?) {
             buffer.writeVarLong(offset, item!!)

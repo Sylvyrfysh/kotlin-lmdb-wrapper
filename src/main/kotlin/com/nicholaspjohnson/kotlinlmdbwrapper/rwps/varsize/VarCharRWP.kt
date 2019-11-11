@@ -8,11 +8,11 @@ import kotlin.reflect.KProperty
 import kotlin.text.Charsets.UTF_8
 
 /**
- * A default [String] RWP that will act on instances of the class [M] with a [maximumLength].
+ * A default [String] RWP that will act on instances of the class [M].
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [VarSizeRWP], and holds [maximumLength] for the maximum length of this string.
+ * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  */
 class VarCharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : VarSizeRWP<M, String?>(obj, nullable) {
     override val readFn: (ByteBuffer, Int) -> String? =

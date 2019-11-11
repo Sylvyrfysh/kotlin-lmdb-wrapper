@@ -4,10 +4,19 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 
+/**
+ * A default [Map] RWP that will act on instances of the class [M].
+ *
+ * @constructor
+ *
+ * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
+ * Holds [newMapInstance], [keyCompanion], and [dataCompanion] for reading and writing purposes.
+ */
 class MapRWP <M: BaseLMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, DataType>> (
     private val newMapInstance: () -> MutableMap<KeyType, DataType>,
     private val keyCompanion: RWPCompanion<*, KeyType>,
@@ -15,6 +24,9 @@ class MapRWP <M: BaseLMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, Dat
     lmdbObject: BaseLMDBObject<M>,
     nullable: Boolean
 ) : VarSizeRWP<M, MapType>(lmdbObject, nullable) {
+    /**
+     * A function that takes the read buffer and offset and returns the value at that point.
+     */
     @Suppress("UNCHECKED_CAST")
     override val readFn: (ByteBuffer, Int) -> MapType = { buffer, off ->
         var offset = off
@@ -46,6 +58,9 @@ class MapRWP <M: BaseLMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, Dat
         retMap as MapType
     }
 
+    /**
+     * A function that takes the write buffer and offset and writes the given value at that point.
+     */
     override val writeFn: (ByteBuffer, Int, MapType) -> Any? = { buffer, off, value ->
         var offset = off
         buffer.writeVarLong(offset, value.size.toLong())
@@ -65,6 +80,9 @@ class MapRWP <M: BaseLMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, Dat
         }
     }
 
+    /**
+     * A function that returns the size of the object when ready to be written on disk.
+     */
     override val getItemOnlySize: (MapType) -> Int = { map ->
         map.size.toLong().getVarLongSize() + map.entries.map {
             val ks = keyCompanion.compSizeFn(it.key).run {

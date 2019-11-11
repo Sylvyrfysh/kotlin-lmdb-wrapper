@@ -8,8 +8,19 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 
+/**
+ * A default [Collection] RWP that will act on instances of the class [M].
+ *
+ * @constructor
+ *
+ * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
+ * Holds [newCollectionInstance] and [itemCompanion] for reading and writing purposes.
+ */
 class CollectionRWP<M: BaseLMDBObject<M>, ItemType, CollectionType: Collection<ItemType>>(private val newCollectionInstance: () -> MutableCollection<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
     VarSizeRWP<M, CollectionType>(lmdbObject, nullable) {
+    /**
+     * A function that takes the read buffer and offset and returns the value at that point.
+     */
     @Suppress("UNCHECKED_CAST")
     override val readFn: (ByteBuffer, Int) -> CollectionType = { buffer, offset ->
         val numItems = buffer.readVarLong(offset)
@@ -31,6 +42,9 @@ class CollectionRWP<M: BaseLMDBObject<M>, ItemType, CollectionType: Collection<I
         ret as CollectionType
     }
 
+    /**
+     * A function that takes the write buffer and offset and writes the given value at that point.
+     */
     override val writeFn: (ByteBuffer, Int, CollectionType) -> Any? = { byteBuffer: ByteBuffer, i: Int, f: CollectionType ->
         val items = field!!.size.toLong()
         val itemsLen = items.getVarLongSize()
@@ -46,6 +60,9 @@ class CollectionRWP<M: BaseLMDBObject<M>, ItemType, CollectionType: Collection<I
         }
     }
 
+    /**
+     * A function that returns the size of the object when ready to be written on disk.
+     */
     override val getItemOnlySize: (CollectionType) -> Int = { list ->
         list.size.toLong().getVarLongSize() + list.map(itemCompanion::compSizeFn).sum() + list.map(itemCompanion::compSizeFn).map(Int::toLong).map(Long::getVarLongSize).sum()
     }

@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [ConstSizeRWP]
+ * Passes [lmdbObject] and [nullable] to the underlying [ConstSizeRWP]
  */
 class ByteRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : ConstSizeRWP<M, Byte?>(obj, nullable) {
     override val itemSize: Int = 1

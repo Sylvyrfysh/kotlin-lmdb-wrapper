@@ -274,10 +274,19 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
     }
 
+    /**
+     * Helper functions applicable to all [BaseLMDBObject] types
+     */
     companion object {
-        inline fun <reified M: BaseLMDBObject<M>, T> hasObjectWithValue(env: Long, dbi: Int, prop: KProperty1<M, T>, item: T): Boolean = getObjectWithValue(env, dbi, prop, item) != null
+        /**
+         * Returns true if an item in the [dbi] of [env] has a value of [item] for [property].
+         */
+        inline fun <reified M: BaseLMDBObject<M>, T> hasObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): Boolean = getObjectWithValue(env, dbi, property, item) != null
 
-        inline fun <reified M: BaseLMDBObject<M>, T> getObjectWithValue(env: Long, dbi: Int, prop: KProperty1<M, T>, item: T): M? {
+        /**
+         * If an item in the [dbi] of [env] has a value of [item] for [property], return that object, otherwise null.
+         */
+        inline fun <reified M: BaseLMDBObject<M>, T> getObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): M? {
             val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
@@ -296,7 +305,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 while (rc != MDB_NOTFOUND) {
                     LMDB_CHECK(rc)
                     val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
-                    if (prop.get(obj)?.equals(item) == true) {
+                    if (property.get(obj)?.equals(item) == true) {
                         mdb_cursor_close(cursor)
                         mdb_txn_abort(txn)
                         return obj
@@ -310,9 +319,15 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             }
         }
 
-        inline fun <reified M: BaseLMDBObject<M>, T, R> hasObjectWithEquality(env: Long, dbi: Int, prop: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): Boolean = getObjectWithEquality(env, dbi, prop, item, equalityFunc) != null
+        /**
+         * Returns true if an item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
+         */
+        inline fun <reified M: BaseLMDBObject<M>, T, R> hasObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): Boolean = getObjectWithEquality(env, dbi, property, item, equalityFunc) != null
 
-        inline fun <reified M: BaseLMDBObject<M>, T, R> getObjectWithEquality(env: Long, dbi: Int, prop: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): M? {
+        /**
+         * If an item in the [dbi] of [env] has a value of [item] for [property] with [equalityFunc], return that object, otherwise null.
+         */
+        inline fun <reified M: BaseLMDBObject<M>, T, R> getObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): M? {
             val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
@@ -331,7 +346,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 while (rc != MDB_NOTFOUND) {
                     LMDB_CHECK(rc)
                     val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
-                    if (equalityFunc(prop.get(obj)!!, item)) {
+                    if (equalityFunc(property.get(obj)!!, item)) {
                         mdb_cursor_close(cursor)
                         mdb_txn_abort(txn)
                         return obj
@@ -345,6 +360,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             }
         }
 
+        /**
+         * Iterates over the [dbi] of [env] and passes all items to [block].
+         */
         inline fun <reified M: BaseLMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
             val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
             stackPush().use { stack ->

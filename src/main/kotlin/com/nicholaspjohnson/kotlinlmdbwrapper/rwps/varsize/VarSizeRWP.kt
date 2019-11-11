@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
  *
  * @constructor
  *
- * Passes [lmdbObject] and [propertyName] to the underlying [AbstractRWP].
+ * Passes [lmdbObject] and [nullable] to the underlying [AbstractRWP].
  */
 abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
     AbstractRWP<M, R>(lmdbObject, nullable) {
