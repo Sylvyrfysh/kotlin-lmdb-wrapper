@@ -28,6 +28,9 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         return getTypeDelegate(prop.returnType.classifier, prop)
     }
 
+    /**
+     * Returns an [RWPInterface] that is for [type] on the object [prop], and registers it with the [BaseLMDBObject].
+     */
     @PublishedApi
     internal fun getTypeDelegate(type: KClassifier?, prop: KProperty<*>): RWPInterface<M> {
         val nullable = prop.returnType.isMarkedNullable
@@ -37,6 +40,9 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         return rwp
     }
 
+    /**
+     * Returns a [KClass] of an [AbstractRWP] that is for [type] and has [annotations].
+     */
     @PublishedApi
     internal fun getRWPClass(type: KClassifier?, annotations: List<Annotation>?): KClass<AbstractRWP<M, *>> {
         require(type != null) { "The given type must not be null!" }
@@ -65,11 +71,16 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
             LongArray::class -> LongArrayRWP::class
             ShortArray::class -> ShortArrayRWP::class
             in extraRWPS -> extraRWPS.getValue(type)
-            List::class -> error("Use db.list!")
+            Collection::class -> error("Use db.collection!")
+            Map::class -> error("Use db.map!")
             else -> error("There is no RWP for the type $type!")
         } as KClass<AbstractRWP<M, *>>
     }
 
+    /**
+     * Returns a wrapped [AbstractRWP] for [prop] that is written on database as [DBType] and in code as [ObjectType].
+     * Uses [fromDBToObj] and [fromObjToDB] to convert between these two states.
+     */
     inline fun <reified DBType, reified ObjectType> custom(
         fromDBToObj: KFunction1<DBType, ObjectType>,
         fromObjToDB: KFunction1<ObjectType, DBType>,
@@ -80,34 +91,53 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         return TypeWrapperRWP(d1 as AbstractRWP<M, DBType?>, fromDBToObj, fromObjToDB, obj, prop.returnType.isMarkedNullable)
     }
 
+    /**
+     * Returns a [CollectionRWP] for [prop] that is for the collection type [CollectionType] that holds [ItemType].
+     * Uses [newListFn] to create anew mutable version of [CollectionType] that will have items added on DB read that will then be assigned to the backing field.
+     */
     inline fun <reified ItemType, reified CollectionType: List<ItemType>> collection(
         prop: KProperty<CollectionType>,
         noinline newListFn: () -> MutableCollection<ItemType>
     ): CollectionRWP<M, ItemType, Collection<ItemType>> {
         val underlyingCompanionObj = getRWPClass(ItemType::class, null).companionObjectInstance
         checkNotNull(underlyingCompanionObj) { "The underlying class does not have a companion object the list can work through!" }
+        check(underlyingCompanionObj is RWPCompanion<*, *>) { "Companion object for item class ${ItemType::class.simpleName} does not extend RWPCompanion!" }
+        check(!isNullable<ItemType>()) { "Null item types are not yet supported!" }
         val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
         val rwp = CollectionRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
     }
 
+    /**
+     * Returns a [MapRWP] for [prop] that is for the map type [MapType] that is keyed by [KeyType] and valued by [DataType].
+     * Uses [newMapFn] to create anew mutable version of [MapType] that will have items added on DB read that will then be assigned to the backing field.
+     */
     inline fun <reified KeyType, reified DataType, reified MapType: Map<KeyType, DataType>> map(
         prop: KProperty<MapType>,
         noinline newMapFn: () -> MutableMap<KeyType, DataType>
     ): MapRWP<M, KeyType, DataType, Map<KeyType, DataType>> {
         val underlyingKeyCompanionObj = getRWPClass(KeyType::class, null).companionObjectInstance
         checkNotNull(underlyingKeyCompanionObj) { "The underlying key class does not have a companion object the map can work through!" }
+        check(underlyingKeyCompanionObj is RWPCompanion<*, *>) { "Companion object for key class ${KeyType::class.simpleName} does not extend RWPCompanion!" }
+        check(!isNullable<KeyType>()) { "Null key types are not yet supported!" }
         val underlyingKeyCompanion = underlyingKeyCompanionObj as RWPCompanion<AbstractRWP<*, KeyType>, KeyType>
 
         val underlyingDataCompanionObj = getRWPClass(DataType::class, null).companionObjectInstance
         checkNotNull(underlyingDataCompanionObj) { "The underlying data class does not have a companion object the map can work through!" }
+        check(underlyingDataCompanionObj is RWPCompanion<*, *>) { "Companion object for data class ${KeyType::class.simpleName} does not extend RWPCompanion!" }
+        check(!isNullable<DataType>()) { "Null data types are not yet supported!" }
         val underlyingDataCompanion = underlyingDataCompanionObj as RWPCompanion<AbstractRWP<*, DataType>, DataType>
 
         val rwp = MapRWP(newMapFn, underlyingKeyCompanion, underlyingDataCompanion, obj, prop.returnType.isMarkedNullable)
         obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
         return rwp
     }
+
+    /**
+     * Returns whether or not the given type [T] is nullable.
+     */
+    inline fun <reified T> isNullable() = null is T
 
     /**
      * Utilities to use related to user-specified RWPs
