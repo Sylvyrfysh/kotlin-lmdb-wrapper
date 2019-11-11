@@ -62,4 +62,10 @@ object NoDBBaseObjectTester {
         val test = DefaultSetTesterObject()
         assertEquals(DefaultSetTesterObject.initialSet, test.shouldBeDefault)
     }
+
+    @Test
+    fun `Test isNullable works`() {
+        assertTrue(LMDBBaseObjectProvider.isNullable<Int?>())
+        assertFalse(LMDBBaseObjectProvider.isNullable<Int>())
+    }
 }

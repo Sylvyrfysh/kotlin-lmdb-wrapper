@@ -135,11 +135,6 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
     }
 
     /**
-     * Returns whether or not the given type [T] is nullable.
-     */
-    inline fun <reified T> isNullable() = null is T
-
-    /**
      * Utilities to use related to user-specified RWPs
      */
     companion object {
@@ -152,5 +147,10 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
             require(typeFor != null) { "The given type must not be null!" }
             extraRWPS[typeFor] = rwpClass
         }
+
+        /**
+         * Returns whether or not the given type [T] is nullable.
+         */
+        inline fun <reified T> isNullable() = null is T
     }
 }
