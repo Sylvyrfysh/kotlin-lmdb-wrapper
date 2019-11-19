@@ -8,6 +8,7 @@ import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.reflect.KProperty0
 import kotlin.reflect.KProperty1
@@ -281,13 +282,15 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         /**
          * Returns true if an item in the [dbi] of [env] has a value of [item] for [property].
          */
-        inline fun <reified M: BaseLMDBObject<M>, T> hasObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): Boolean = getObjectWithValue(env, dbi, property, item) != null
+        inline fun <reified M: BaseLMDBObject<M>, T> hasObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): Boolean = getObjectWithValue(env, dbi, property, item).isNotEmpty()
 
         /**
          * If an item in the [dbi] of [env] has a value of [item] for [property], return that object, otherwise null.
          */
-        inline fun <reified M: BaseLMDBObject<M>, T> getObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): M? {
+        inline fun <reified M: BaseLMDBObject<M>, T> getObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): List<M> {
             val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+
+            val ret = ArrayList<M>()
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
 
@@ -308,27 +311,29 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     if (property.get(obj)?.equals(item) == true) {
                         mdb_cursor_close(cursor)
                         mdb_txn_abort(txn)
-                        return obj
+                        ret.add(obj)
                     }
                     rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
                 }
 
                 mdb_cursor_close(cursor)
                 mdb_txn_abort(txn)
-                return null
+                return ret
             }
         }
 
         /**
          * Returns true if an item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
          */
-        inline fun <reified M: BaseLMDBObject<M>, T, R> hasObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): Boolean = getObjectWithEquality(env, dbi, property, item, equalityFunc) != null
+        inline fun <reified M: BaseLMDBObject<M>, T, R> hasObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): Boolean = getObjectsWithEquality(env, dbi, property, item, equalityFunc).isNotEmpty()
 
         /**
          * If an item in the [dbi] of [env] has a value of [item] for [property] with [equalityFunc], return that object, otherwise null.
          */
-        inline fun <reified M: BaseLMDBObject<M>, T, R> getObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): M? {
+        inline fun <reified M: BaseLMDBObject<M>, T, R> getObjectsWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): List<M> {
             val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+
+            val ret = ArrayList<M>()
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
 
@@ -349,14 +354,14 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     if (equalityFunc(property.get(obj)!!, item)) {
                         mdb_cursor_close(cursor)
                         mdb_txn_abort(txn)
-                        return obj
+                        ret.add(obj)
                     }
                     rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
                 }
 
                 mdb_cursor_close(cursor)
                 mdb_txn_abort(txn)
-                return null
+                return ret
             }
         }
 
