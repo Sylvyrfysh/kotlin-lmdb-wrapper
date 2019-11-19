@@ -1,12 +1,9 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.util.lmdb.LMDB
 import java.lang.IllegalStateException
@@ -31,6 +28,13 @@ object BasicDBTester {
     @JvmStatic
     fun `Set Up`() {
         assumeTrue(!isCI)
+
+        if (Files.exists(Paths.get("db"))) {
+            Files.list(Paths.get("db")).forEach(Files::delete)
+        } else {
+            Files.createDirectories(Paths.get("db"))
+        }
+
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(LMDB.mdb_env_create(pp))
@@ -42,11 +46,6 @@ object BasicDBTester {
             LMDB.mdb_env_open(
                 env,
                 Paths.get("db").apply {
-                    if (Files.exists(this)) {
-                        Files.list(this).forEach(Files::delete)
-                    } else {
-                        Files.createDirectories(this)
-                    }
                 }.toAbsolutePath().toString(),
                 0,
                 436
@@ -61,6 +60,12 @@ object BasicDBTester {
         testObj1.key = 1
         testObj1.data = 1234
         testObj1.writeInSingleTX(env, dbi)
+    }
+    
+    @AfterAll
+    @JvmStatic
+    fun `Tear Down`() {
+        LMDB.mdb_env_close(env)
     }
 
     @Test
@@ -316,8 +321,9 @@ object BasicDBTester {
         m3.writeInSingleTX(env, multiGetDbi)
 
         val expectM2 = BaseLMDBObject.getObjectWithValue(env, multiGetDbi, MisalignedShortArray::single, 57.toByte())
-        assertNotNull(expectM2)
-        assertEquals(2, expectM2!!.zArray.size)
+        assertNotNull(expectM2.firstOrNull())
+        assertEquals(1, expectM2.size)
+        assertEquals(2, expectM2.first().zArray.size)
     }
 
     @Test
@@ -336,11 +342,11 @@ object BasicDBTester {
         l2.list = arrayListOf("Strings Extra!", "Cause why not though!", "Another for good measure!")
         l2.writeInSingleTX(env, multiGetDbi2)
 
-        val obj = BaseLMDBObject.getObjectWithEquality(env, multiGetDbi2, ListTester::list, eqCheck, ArrayList<String>::contains)
+        val obj = BaseLMDBObject.getObjectsWithEquality(env, multiGetDbi2, ListTester::list, eqCheck, ArrayList<String>::contains).firstOrNull()
         assertNotNull(obj)
         assertEquals(key1, obj!!.key)
 
-        val obj2 = BaseLMDBObject.getObjectWithEquality(env, multiGetDbi2, ListTester::list, "Something that doesn't show up", ArrayList<String>::contains)
+        val obj2 = BaseLMDBObject.getObjectsWithEquality(env, multiGetDbi2, ListTester::list, "Something that doesn't show up", ArrayList<String>::contains).firstOrNull()
         assertNull(obj2)
     }
 

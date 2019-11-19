@@ -309,8 +309,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     LMDB_CHECK(rc)
                     val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
                     if (property.get(obj)?.equals(item) == true) {
-                        mdb_cursor_close(cursor)
-                        mdb_txn_abort(txn)
                         ret.add(obj)
                     }
                     rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
@@ -352,8 +350,6 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                     LMDB_CHECK(rc)
                     val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
                     if (equalityFunc(property.get(obj)!!, item)) {
-                        mdb_cursor_close(cursor)
-                        mdb_txn_abort(txn)
                         ret.add(obj)
                     }
                     rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
