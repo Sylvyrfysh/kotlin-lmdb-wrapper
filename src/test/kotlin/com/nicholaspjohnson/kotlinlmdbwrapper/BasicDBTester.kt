@@ -65,6 +65,8 @@ object BasicDBTester {
     @AfterAll
     @JvmStatic
     fun `Tear Down`() {
+        assumeTrue(!isCI)
+
         LMDB.mdb_env_close(env)
     }
 
