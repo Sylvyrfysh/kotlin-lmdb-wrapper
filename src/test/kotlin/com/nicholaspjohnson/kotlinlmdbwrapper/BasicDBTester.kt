@@ -322,7 +322,7 @@ object BasicDBTester {
         m3.zArray = ShortArray(3)
         m3.writeInSingleTX(env, multiGetDbi)
 
-        val expectM2 = BaseLMDBObject.getObjectWithValue(env, multiGetDbi, MisalignedShortArray::single, 57.toByte())
+        val expectM2 = BaseLMDBObject.getObjectsWithValue(env, multiGetDbi, MisalignedShortArray::single, 57.toByte())
         assertNotNull(expectM2.firstOrNull())
         assertEquals(1, expectM2.size)
         assertEquals(2, expectM2.first().zArray.size)
