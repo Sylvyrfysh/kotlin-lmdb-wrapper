@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB.*
@@ -8,6 +9,7 @@ import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
+import kotlin.Comparator
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.reflect.KProperty0
@@ -23,8 +25,8 @@ import kotlin.reflect.jvm.isAccessible
  * @param[from] The way to create this object
  */
 abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
-    private val haveNullable = TreeMap<String, Boolean>()
-    private val rwpsMap = TreeMap<String, AbstractRWP<M, *>>()
+    private val haveNullable = TreeMap<Triple<String, Boolean, Boolean>, Boolean>(pairComparator)
+    private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<M, *>>(pairComparator)
 
     private lateinit var nameToInts: Map<String, Int>
 
@@ -98,10 +100,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
     fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
-        require(!haveNullable.containsKey(name)) { "Cannot have the same name twice!" }
+        val key = Triple(name, nullable, rwp is ConstSizeRWP<*, *>)
+        require(!haveNullable.containsKey(key)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
-        haveNullable[name] = nullable
-        rwpsMap[name] = rwp
+        haveNullable[key] = nullable
+        rwpsMap[key] = rwp
     }
 
     private fun setTypes() {
@@ -111,8 +114,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             nullableIter.next().value
         }
         val tNameMap = HashMap<String, Int>()
+        val tempIter = rwpsMap.iterator()
         haveNullable.keys.forEachIndexed { index, s ->
-            tNameMap[s] = index
+            println("" + tempIter.next() + ": " + index)
+            tNameMap[s.first] = index
         }
         this.nameToInts = tNameMap
         val rwpOrderedIter = rwpsMap.entries.iterator()
@@ -279,16 +284,39 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Helper functions applicable to all [BaseLMDBObject] types
      */
     companion object {
-        /**
-         * Returns true if an item in the [dbi] of [env] has a value of [item] for [property].
-         */
-        inline fun <reified M: BaseLMDBObject<M>, T> hasObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): Boolean = getObjectWithValue(env, dbi, property, item).isNotEmpty()
+        private val pairComparator = Comparator<Triple<String, Boolean, Boolean>> { o1, o2 ->
+            return@Comparator when {
+                o1.third == o2.third -> when {
+                    o1.second == o2.second -> o1.first.compareTo(o2.first)
+                    o2.second -> -1
+                    else -> 1
+                }
+                o1.third -> -1
+                else -> 1
+            }
+        }
 
         /**
-         * If an item in the [dbi] of [env] has a value of [item] for [property], return that object, otherwise null.
+         * Returns true if any item in the [dbi] of [env] has a value of [item] for [property].
          */
-        inline fun <reified M: BaseLMDBObject<M>, T> getObjectWithValue(env: Long, dbi: Int, property: KProperty1<M, T>, item: T): List<M> {
-            val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+        inline fun <reified M : BaseLMDBObject<M>, T> hasObjectWithValue(
+            env: Long,
+            dbi: Int,
+            property: KProperty1<M, T>,
+            item: T
+        ): Boolean = getObjectsWithValue(env, dbi, property, item).isNotEmpty()
+
+        /**
+         * Returns all items in the [dbi] of [env] with a value of [item] for [property]. If none match, an empty list is returned.
+         */
+        inline fun <reified M : BaseLMDBObject<M>, T> getObjectsWithValue(
+            env: Long,
+            dbi: Int,
+            property: KProperty1<M, T>,
+            item: T
+        ): List<M> {
+            val const =
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
 
             val ret = ArrayList<M>()
             stackPush().use { stack ->
@@ -321,15 +349,28 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         }
 
         /**
-         * Returns true if an item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
+         * Returns true if any item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
          */
-        inline fun <reified M: BaseLMDBObject<M>, T, R> hasObjectWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): Boolean = getObjectsWithEquality(env, dbi, property, item, equalityFunc).isNotEmpty()
+        inline fun <reified M : BaseLMDBObject<M>, T, R> hasObjectWithEquality(
+            env: Long,
+            dbi: Int,
+            property: KProperty1<M, T>,
+            item: R,
+            equalityFunc: (T, R) -> Boolean
+        ): Boolean = getObjectsWithEquality(env, dbi, property, item, equalityFunc).isNotEmpty()
 
         /**
-         * If an item in the [dbi] of [env] has a value of [item] for [property] with [equalityFunc], return that object, otherwise null.
+         * Returns all items in the [dbi] of [env] with a value of [item] for [property] with [equalityFunc]. If none match, an empty list is returned.
          */
-        inline fun <reified M: BaseLMDBObject<M>, T, R> getObjectsWithEquality(env: Long, dbi: Int, property: KProperty1<M, T>, item: R, equalityFunc: (T, R) -> Boolean): List<M> {
-            val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+        inline fun <reified M : BaseLMDBObject<M>, T, R> getObjectsWithEquality(
+            env: Long,
+            dbi: Int,
+            property: KProperty1<M, T>,
+            item: R,
+            equalityFunc: (T, R) -> Boolean
+        ): List<M> {
+            val const =
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
 
             val ret = ArrayList<M>()
             stackPush().use { stack ->
@@ -364,8 +405,9 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
         /**
          * Iterates over the [dbi] of [env] and passes all items to [block].
          */
-        inline fun <reified M: BaseLMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
-            val const = M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+        inline fun <reified M : BaseLMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
+            val const =
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
 
