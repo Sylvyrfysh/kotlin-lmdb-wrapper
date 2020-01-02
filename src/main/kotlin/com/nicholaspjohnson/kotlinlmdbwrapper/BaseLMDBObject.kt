@@ -74,8 +74,8 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             setTypes()
             if (firstBuf != null) {
                 initBuffers(firstBuf!!)
+                firstBuf = null
             }
-            firstBuf = null
             isInit = true
         }
     }
@@ -99,7 +99,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     /**
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
-    fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
+    internal fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
         val key = Triple(name, nullable, rwp is ConstSizeRWP<*, *>)
         require(!haveNullable.containsKey(key)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
@@ -130,6 +130,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Initialize the value of the object backed by [kProperty] to [item].
      */
     protected fun <T> set(kProperty: KProperty0<T>, item: T) {
+        require(!isInit) { "Do not allow changing of items after initialization!" }
         val oldAccessible = kProperty.isAccessible
         kProperty.isAccessible = true
         @Suppress("UNCHECKED_CAST")
@@ -143,7 +144,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     protected val db by lazy { LMDBBaseObjectProvider(this) }
 
     /**
-     * Returns the key size for this object. Defaults to 8.
+     * Returns the key size for this object. Defaults to 8, size of a [Long] on a 64-bit platform.
      */
     open fun keySize(): Int = 8
 
