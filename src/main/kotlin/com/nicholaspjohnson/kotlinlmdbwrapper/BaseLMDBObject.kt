@@ -99,7 +99,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     /**
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
-    internal fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
+    fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
         val key = Triple(name, nullable, rwp is ConstSizeRWP<*, *>)
         require(!haveNullable.containsKey(key)) { "Cannot have the same name twice!" }
         require(!isInit) { "Cannot add new DB items after first access!" }
