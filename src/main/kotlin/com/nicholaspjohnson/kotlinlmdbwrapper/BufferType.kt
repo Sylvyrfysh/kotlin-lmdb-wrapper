@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 /**
  * A limited set of options for initializing a [BaseLMDBObject].
  */
-sealed class ObjectBufferType {
+sealed class BufferType {
     /**
      * Tells us to use the user-defined buffer [buffer]
      *
@@ -15,7 +15,7 @@ sealed class ObjectBufferType {
      *
      * Sets the user-defined buffer to [buffer]
      */
-    data class Buffer(val buffer: ByteBuffer) : ObjectBufferType()
+    data class Buffer(val buffer: ByteBuffer) : BufferType()
 
     /**
      * Tells us to use the database-read buffer [buffer].
@@ -27,10 +27,10 @@ sealed class ObjectBufferType {
      *
      * Sets the database-defined buffer to [buffer]
      */
-    data class DBRead(val buffer: ByteBuffer) : ObjectBufferType()
+    data class DBRead(val buffer: ByteBuffer) : BufferType()
 
     /**
      * Tells us to not import a buffer at all and only use DB-backed buffers.
      */
-    object None : ObjectBufferType()
+    object None : BufferType()
 }

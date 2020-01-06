@@ -1,6 +1,8 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 import kotlin.experimental.or
@@ -22,7 +24,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
     protected var field: R? = null
 
     /**
-     * Returns the size of this object in the database without any nullable headers. Will only be called with non-null mebers.
+     * Returns the size of this object in the database without any nullable headers. Will only be called with non-null members.
      */
     internal abstract val getSize: (R) -> Int
 
@@ -89,13 +91,21 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
     /**
      * Returns the number of bytes this object will be in DB.
      */
-    override fun getDiskSize(): Int {
+    override fun getDiskSize(nullStoreOption: NullStoreOption): Int {
         return if (nullable) {
             return if (field == null) {
-                1
+                if (nullStoreOption == NullStoreOption.SIZE) {
+                    1
+                } else if (this is ConstSizeRWP<M, *>) {
+                    1 + (this as ConstSizeRWP<M, *>).itemSize
+                } else {
+                    1
+                }
             } else {
                 1 + getSize(field!!)
             }
+        } else if (this is ConstSizeRWP<M, *>) {
+            (this as ConstSizeRWP<M, *>).itemSize
         } else {
             getSize(field!!)
         }

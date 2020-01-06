@@ -16,7 +16,7 @@ abstract class ConstSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<
     /**
      * The constant size of this item.
      */
-    protected abstract val itemSize: Int
+    internal abstract val itemSize: Int
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
      */

@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import kotlin.reflect.KProperty
 
 /**
@@ -19,5 +20,5 @@ interface RWPInterface<M: BaseLMDBObject<M>> {
     /**
      * Returns the size of this object when it is written to the DB
      */
-    fun getDiskSize(): Int
+    fun getDiskSize(nullStoreOption: NullStoreOption): Int
 }

@@ -1,21 +1,24 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBDbi
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
+import org.lwjgl.util.lmdb.LMDB
 import java.nio.ByteBuffer
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 
-class TestObj(data: ObjectBufferType): BaseLMDBObject<TestObj>(data) {
-    constructor(): this(ObjectBufferType.None)
+class TestObj(data: BufferType): BaseLMDBObject<TestObj>(Companion, data) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key.toLong())
     }
 
     var key: Int by db
     var data: Int? by db
+
+    companion object: LMDBDbi<TestObj>("test_obj", NullStoreOption.SIZE, ::TestObj, LMDB.MDB_INTEGERKEY)
 }
 
-class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.None) {
+/*
+class AllTypesObject: BaseLMDBObject<AllTypesObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, long)
     }
@@ -33,7 +36,7 @@ class AllTypesObject: BaseLMDBObject<AllTypesObject>(ObjectBufferType.None) {
     var varchar: String by db
 }
 
-class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.None) {
+class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, normInt.toLong())
     }
@@ -44,7 +47,7 @@ class MixNormalNulls: BaseLMDBObject<MixNormalNulls>(ObjectBufferType.None) {
     var normalString: String by db
 }
 
-class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.None) {
+class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, first)
     }
@@ -55,7 +58,7 @@ class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(ObjectBufferType.None) 
     var second: Long by db
 }
 
-class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(ObjectBufferType.None) {
+class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -65,7 +68,7 @@ class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(ObjectBufferT
     var zInt: Int by db
 }
 
-class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBufferType.None) {
+class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -82,8 +85,8 @@ class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(ObjectBuffe
     }
 }
 
-class MisalignedShortArray(from: ObjectBufferType): BaseLMDBObject<MisalignedShortArray>(from) {
-    constructor(): this(ObjectBufferType.None)
+class MisalignedShortArray(from: BufferType): BaseLMDBObject<MisalignedShortArray>(from) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -93,8 +96,8 @@ class MisalignedShortArray(from: ObjectBufferType): BaseLMDBObject<MisalignedSho
     var zArray: ShortArray by db
 }
 
-class ListTester(from: ObjectBufferType): BaseLMDBObject<ListTester>(from) {
-    constructor(): this(ObjectBufferType.None)
+class ListTester(from: BufferType): BaseLMDBObject<ListTester>(from) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -103,7 +106,7 @@ class ListTester(from: ObjectBufferType): BaseLMDBObject<ListTester>(from) {
     var list: ArrayList<String> by db.collection(this::list) { ArrayList() }
 }
 
-class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(ObjectBufferType.None) {
+class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -112,7 +115,7 @@ class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(ObjectBufferType.None) {
     var uuid: UUID by db
 }
 
-class MapTester: BaseLMDBObject<MapTester>(ObjectBufferType.None) {
+class MapTester: BaseLMDBObject<MapTester>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -120,3 +123,4 @@ class MapTester: BaseLMDBObject<MapTester>(ObjectBufferType.None) {
     var key: Long by db
     var map: HashMap<String, Int> by db.map(this::map) { HashMap() }
 }
+ */

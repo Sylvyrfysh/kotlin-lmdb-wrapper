@@ -1,6 +1,9 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBDbi
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import org.lwjgl.system.MemoryStack.stackPush
 import org.lwjgl.system.MemoryUtil
@@ -12,8 +15,10 @@ import java.util.*
 import kotlin.Comparator
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.jvm.isAccessible
 
 /**
@@ -24,11 +29,12 @@ import kotlin.reflect.jvm.isAccessible
  *
  * @param[from] The way to create this object
  */
-abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
-    private val haveNullable = TreeMap<Triple<String, Boolean, Boolean>, Boolean>(pairComparator)
+abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>, from: BufferType) {
+    private val propMap = TreeMap<Triple<String, Boolean, Boolean>, KProperty<*>>(pairComparator)
     private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<M, *>>(pairComparator)
 
-    private lateinit var nameToInts: Map<String, Int>
+    private lateinit var nameToIndices: Map<String, Int> //Name to index of position
+    internal lateinit var constSizeMap: Map<KProperty<*>, Triple<Int, Boolean, RWPCompanion<*, *>?>> //Name of const size items to their positions
 
     private lateinit var rwpsOrdered: Array<AbstractRWP<M, *>>
     private lateinit var nullables: Array<Boolean>
@@ -37,7 +43,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Returns the size of this object in-DB
      */
     val size: Int
-        get() = rwpsOrdered.map(AbstractRWP<M, *>::getDiskSize).sum()
+        get() = rwpsOrdered.map{ it.getDiskSize(dbi.nullStoreOption) }.sum()
 
     /**
      * True if this object has been committed to the DB, or read from the DB and not modified.
@@ -49,16 +55,16 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
     init {
         when (from) {
-            is ObjectBufferType.None -> {
+            is BufferType.None -> {
                 firstBuf = null
                 committed = false
             }
-            is ObjectBufferType.Buffer -> {
+            is BufferType.Buffer -> {
                 checkBuffer(from.buffer)
                 firstBuf = from.buffer
                 committed = false
             }
-            is ObjectBufferType.DBRead -> {
+            is BufferType.DBRead -> {
                 checkBuffer(from.buffer)
                 firstBuf = from.buffer
                 committed = true
@@ -99,29 +105,37 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
     /**
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
-    internal fun addType(name: String, rwp: AbstractRWP<M, *>, nullable: Boolean) {
-        val key = Triple(name, nullable, rwp is ConstSizeRWP<*, *>)
-        require(!haveNullable.containsKey(key)) { "Cannot have the same name twice!" }
+    fun addType(prop: KProperty<*>, rwp: AbstractRWP<M, *>) {
         require(!isInit) { "Cannot add new DB items after first access!" }
-        haveNullable[key] = nullable
+        val key = Triple(prop.name, prop.returnType.isMarkedNullable, rwp is ConstSizeRWP<*, *>)
+        require(!propMap.containsKey(key)) { "Cannot have the same name twice!" }
+        propMap[key] = prop
         rwpsMap[key] = rwp
     }
 
     private fun setTypes() {
-        require(haveNullable.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
-        val nullableIter = haveNullable.entries.iterator()
-        this.nullables = Array(haveNullable.size) {
-            nullableIter.next().value
+        require(propMap.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
+        val nullableIter = propMap.entries.iterator()
+        this.nullables = Array(propMap.size) {
+            nullableIter.next().value.returnType.isMarkedNullable
         }
         val tNameMap = HashMap<String, Int>()
         val tempIter = rwpsMap.iterator()
-        haveNullable.keys.forEachIndexed { index, s ->
-            println("" + tempIter.next() + ": " + index)
-            tNameMap[s.first] = index
+        var offset = 0
+        val writeMap = HashMap<KProperty<*>, Triple<Int, Boolean, RWPCompanion<*, *>?>>()
+        propMap.entries.forEachIndexed { index, s ->
+            tNameMap[s.key.first] = index
+            if (s.key.third /*const size*/ && (!s.key.second /*not-null*/ || (s.key.second && dbi.nullStoreOption == NullStoreOption.SPEED) /*nullable and speed option*/)) {
+                val tin = tempIter.next()
+                println(tin.value::class.companionObjectInstance)
+                writeMap[s.value] = Triple(offset, nullables[index], tin.value::class.companionObjectInstance as RWPCompanion<*, *>?)
+                offset += tin.value.getDiskSize(dbi.nullStoreOption)
+            }
         }
-        this.nameToInts = tNameMap
+        constSizeMap = Collections.unmodifiableMap(writeMap)
+        this.nameToIndices = tNameMap
         val rwpOrderedIter = rwpsMap.entries.iterator()
-        this.rwpsOrdered = Array(haveNullable.size) {
+        this.rwpsOrdered = Array(propMap.size) {
             rwpOrderedIter.next().value
         }
     }
@@ -157,10 +171,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Writes only this object into the [dbi] of [env].
      * The key will be the return of [keyFunc].
      */
-    fun writeInSingleTX(env: Long, dbi: Int) {
+    fun writeInSingleTX() {
         if (!isInit) {
             setUsed()
         }
+        require(dbi.handle != -1) { "DBI must be initialized to store objects!" }
         stackPush().use { stack ->
             val key = stack.malloc(keySize())
             keyFunc(key)
@@ -171,11 +186,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
             val pp = stack.mallocPointer(1)
 
-            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
+            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, 0, pp))
             val txn = pp.get(0)
 
             try {
-                LMDB_CHECK(mdb_put(txn, dbi, kv, dv, MDB_RESERVE))
+                LMDB_CHECK(mdb_put(txn, dbi.handle, kv, dv, MDB_RESERVE))
 
                 val writeDB = dv.mv_data()!!
                 var off = 0
@@ -198,10 +213,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * If the key does not exist, a [DataNotFoundException] will be thrown.
      */
     @Throws(DataNotFoundException::class)
-    fun readFromDB(env: Long, dbi: Int) {
+    fun readFromDB() {
         if (!isInit) {
             setUsed()
         }
+        require(dbi.handle != -1) { "DBI must be initialized to read objects!" }
         stackPush().use { stack ->
             val key = stack.malloc(keySize())
             keyFunc(key)
@@ -209,11 +225,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
             val pp = stack.mallocPointer(1)
-            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
+            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, MDB_RDONLY, pp))
             val txn = pp.get(0)
 
             val dv = MDBVal.callocStack()
-            val err = mdb_get(txn, dbi, kv, dv)
+            val err = mdb_get(txn, dbi.handle, kv, dv)
             if (err == MDB_NOTFOUND) {
                 mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
@@ -235,10 +251,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
      * Based on the key provided by [keyFunc], attempts to delete this item.
      * If the key does not exist, a [DataNotFoundException] will be thrown.
      */
-    fun delete(env: Long, dbi: Int) {
+    fun delete() {
         if (!isInit) {
             setUsed()
         }
+        require(dbi.handle != -1) { "DBI must be initialized to delete objects!" }
         stackPush().use { stack ->
             val key = stack.malloc(keySize())
             keyFunc(key)
@@ -246,11 +263,11 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
             val pp = stack.mallocPointer(1)
-            LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, 0, pp))
+            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, 0, pp))
             val txn = pp.get(0)
 
             val flags = stack.mallocInt(1)
-            LMDB_CHECK(mdb_dbi_flags(txn, dbi, flags))
+            LMDB_CHECK(mdb_dbi_flags(txn, dbi.handle, flags))
 
             val data = if ((flags.get(0) and MDB_DUPSORT) == MDB_DUPSORT) {
                 val dv = MDBVal.callocStack(stack).mv_data(stack.malloc(size))
@@ -264,7 +281,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
                 null
             }
 
-            val err = mdb_del(txn, dbi, kv, data)
+            val err = mdb_del(txn, dbi.handle, kv, data)
             if (err == MDB_NOTFOUND) {
                 mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
@@ -317,7 +334,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             item: T
         ): List<M> {
             val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
 
             val ret = ArrayList<M>()
             stackPush().use { stack ->
@@ -336,7 +353,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
                 while (rc != MDB_NOTFOUND) {
                     LMDB_CHECK(rc)
-                    val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
+                    val obj = const.call(BufferType.DBRead(data.mv_data()!!))
                     if (property.get(obj)?.equals(item) == true) {
                         ret.add(obj)
                     }
@@ -371,7 +388,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
             equalityFunc: (T, R) -> Boolean
         ): List<M> {
             val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
 
             val ret = ArrayList<M>()
             stackPush().use { stack ->
@@ -390,7 +407,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
                 while (rc != MDB_NOTFOUND) {
                     LMDB_CHECK(rc)
-                    val obj = const.call(ObjectBufferType.DBRead(data.mv_data()!!))
+                    val obj = const.call(BufferType.DBRead(data.mv_data()!!))
                     if (equalityFunc(property.get(obj)!!, item)) {
                         ret.add(obj)
                     }
@@ -408,7 +425,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
          */
         inline fun <reified M : BaseLMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
             val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == ObjectBufferType::class }
+                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
             stackPush().use { stack ->
                 val pp = stack.mallocPointer(1)
 
@@ -425,7 +442,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(from: ObjectBufferType) {
 
                 while (rc != MDB_NOTFOUND) {
                     LMDB_CHECK(rc)
-                    block(const.call(ObjectBufferType.DBRead(data.mv_data()!!)))
+                    block(const.call(BufferType.DBRead(data.mv_data()!!)))
                     rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
                 }
 

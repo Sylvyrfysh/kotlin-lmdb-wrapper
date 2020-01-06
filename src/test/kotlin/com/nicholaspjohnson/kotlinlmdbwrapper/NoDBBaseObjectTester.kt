@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 object NoDBBaseObjectTester {
+    /*
     @Test
     fun `Test that all stay expected`() {
         val bool = true
@@ -62,6 +63,7 @@ object NoDBBaseObjectTester {
         val test = DefaultSetTesterObject()
         assertEquals(DefaultSetTesterObject.initialSet, test.shouldBeDefault)
     }
+     */
 
     @Test
     fun `Test isNullable works`() {

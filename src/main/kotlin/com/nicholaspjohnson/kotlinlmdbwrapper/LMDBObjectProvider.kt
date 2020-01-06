@@ -36,7 +36,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val nullable = prop.returnType.isMarkedNullable
         val rwpClass =  getRWPClass(type, prop.annotations)
         val rwp = rwpClass.constructors.first().call(obj, nullable)
-        obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
+        obj.addType(prop, rwp)
         return rwp
     }
 
@@ -105,7 +105,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         check(!isNullable<ItemType>()) { "Null item types are not yet supported!" }
         val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
         val rwp = CollectionRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
+        obj.addType(prop, rwp)
         return rwp
     }
 
@@ -130,7 +130,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val underlyingDataCompanion = underlyingDataCompanionObj as RWPCompanion<AbstractRWP<*, DataType>, DataType>
 
         val rwp = MapRWP(newMapFn, underlyingKeyCompanion, underlyingDataCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop.name, rwp, prop.returnType.isMarkedNullable)
+        obj.addType(prop, rwp)
         return rwp
     }
 

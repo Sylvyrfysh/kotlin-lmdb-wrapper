@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -19,7 +20,7 @@ object BasicDBTester {
     private var multiGetDbi: Int = 0
     private var multiGetDbi2: Int = 0
     private var multiGetDbi3: Int = 0
-    private val testObj1 = TestObj(ObjectBufferType.None)
+    private val testObj1 = TestObj()
 
     private var nextID: Int = 2
         get() = (field++)
@@ -35,7 +36,10 @@ object BasicDBTester {
             Files.createDirectories(Paths.get("db"))
         }
 
-        MemoryStack.stackPush().use { stack ->
+        val e = LMDBEnv(Paths.get("db"))
+        e.openDbi(TestObj)
+
+        /*MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(LMDB.mdb_env_create(pp))
             env = pp.get(0)
@@ -55,11 +59,11 @@ object BasicDBTester {
         dbi = openDatabase(env, "base")
         multiGetDbi = openDatabase(env, "multiget")
         multiGetDbi2 = openDatabase(env, "multiget2")
-        multiGetDbi3 = openDatabase(env, "multiget3")
+        multiGetDbi3 = openDatabase(env, "multiget3")*/
 
         testObj1.key = 1
         testObj1.data = 1234
-        testObj1.writeInSingleTX(env, dbi)
+        testObj1.writeInSingleTX()
     }
     
     @AfterAll
@@ -67,23 +71,23 @@ object BasicDBTester {
     fun `Tear Down`() {
         assumeTrue(!isCI)
 
-        LMDB.mdb_env_close(env)
+        //LMDB.mdb_env_close(env)
     }
 
     @Test
     fun `Test Basic Read Write`() {
-        val testObj2 = TestObj(ObjectBufferType.None)
+        val testObj2 = TestObj()
         testObj2.key = 1
-        testObj2.readFromDB(env, dbi)
+        testObj2.readFromDB()
         assertEquals(testObj1.data, testObj2.data)
     }
 
     @Test
     fun `Test NonExistent Key throws Exception`() {
-        val testObj2 = TestObj(ObjectBufferType.None)
+        val testObj2 = TestObj()
         testObj2.key = Integer.MIN_VALUE
         val except = assertThrows<DataNotFoundException> {
-            testObj2.readFromDB(env, dbi)
+            testObj2.readFromDB()
         }
         assertEquals("The key supplied does not have any data in the DB!", except.message)
     }
@@ -92,34 +96,35 @@ object BasicDBTester {
     fun `Test ReWrite Does not Modify Others Until ReRead`() {
         val methodKey = nextID
         val firstData = 5678
-        val testObj2 = TestObj(ObjectBufferType.None)
+        val testObj2 = TestObj()
         testObj2.key = methodKey
         testObj2.data = firstData
-        testObj2.writeInSingleTX(env, dbi)
-        val testObj3 = TestObj(ObjectBufferType.None)
+        testObj2.writeInSingleTX()
+        val testObj3 = TestObj()
         testObj3.key = methodKey
-        testObj3.readFromDB(env, dbi)
+        testObj3.readFromDB()
         assertEquals(firstData, testObj3.data)
         testObj2.data = 9012
-        testObj2.writeInSingleTX(env, dbi)
+        testObj2.writeInSingleTX()
         assertEquals(firstData, testObj3.data)
-        testObj3.readFromDB(env, dbi)
+        testObj3.readFromDB()
         assertEquals(9012, testObj3.data)
     }
 
     @Test
     fun `Test data stays null`() {
         val methodKey = nextID
-        val testObj2 = TestObj(ObjectBufferType.None)
+        val testObj2 = TestObj()
         testObj2.key = methodKey
         testObj2.data = null
-        testObj2.writeInSingleTX(env, dbi)
-        val testObj3 = TestObj(ObjectBufferType.None)
+        testObj2.writeInSingleTX()
+        val testObj3 = TestObj()
         testObj3.key = methodKey
-        testObj3.readFromDB(env, dbi)
+        testObj3.readFromDB()
         assertEquals(null, testObj3.data)
     }
 
+    /*
     @Test
     fun `Test data offsets after load`() {
         val methodKey = nextID
@@ -370,4 +375,5 @@ object BasicDBTester {
 
         assertFalse(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
     }
+     */
 }
