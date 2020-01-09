@@ -33,4 +33,6 @@ sealed class BufferType {
      * Tells us to not import a buffer at all and only use DB-backed buffers.
      */
     object None : BufferType()
+
+    internal object DbiObject : BufferType()
 }

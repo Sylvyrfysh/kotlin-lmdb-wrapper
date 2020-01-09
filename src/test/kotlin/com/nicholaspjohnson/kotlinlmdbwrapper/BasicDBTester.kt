@@ -1,25 +1,16 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.TestUtils.openDatabase
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import org.lwjgl.system.MemoryStack
-import org.lwjgl.util.lmdb.LMDB
-import java.lang.IllegalStateException
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.*
 
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
 
-    private var env: Long = 0L
-    private var dbi: Int = 0
-    private var multiGetDbi: Int = 0
-    private var multiGetDbi2: Int = 0
-    private var multiGetDbi3: Int = 0
+    private lateinit var env: LMDBEnv
     private val testObj1 = TestObj()
 
     private var nextID: Int = 2
@@ -36,30 +27,9 @@ object BasicDBTester {
             Files.createDirectories(Paths.get("db"))
         }
 
-        val e = LMDBEnv(Paths.get("db"))
-        e.openDbi(TestObj)
-
-        /*MemoryStack.stackPush().use { stack ->
-            val pp = stack.mallocPointer(1)
-            LMDB_CHECK(LMDB.mdb_env_create(pp))
-            env = pp.get(0)
-        }
-
-        LMDB.mdb_env_set_maxdbs(env, 5)
-        LMDB_CHECK(
-            LMDB.mdb_env_open(
-                env,
-                Paths.get("db").apply {
-                }.toAbsolutePath().toString(),
-                0,
-                436
-            )
-        )
-
-        dbi = openDatabase(env, "base")
-        multiGetDbi = openDatabase(env, "multiget")
-        multiGetDbi2 = openDatabase(env, "multiget2")
-        multiGetDbi3 = openDatabase(env, "multiget3")*/
+        env = LMDBEnv(Paths.get("db"), numDbis = 32)
+        env.openDbi(TestObj)
+        env.openDbi(MixNormalNulls)
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -124,7 +94,6 @@ object BasicDBTester {
         assertEquals(null, testObj3.data)
     }
 
-    /*
     @Test
     fun `Test data offsets after load`() {
         val methodKey = nextID
@@ -134,19 +103,20 @@ object BasicDBTester {
         mixNormalNulls.aNullableString = "This is a string first."
         mixNormalNulls.normalString = "This is something I guess"
         mixNormalNulls.aNullableString = null
-        mixNormalNulls.writeInSingleTX(env, dbi)
+        mixNormalNulls.writeInSingleTX()
 
         val mixNormalNulls2 = MixNormalNulls()
         mixNormalNulls2.normInt = methodKey
-        mixNormalNulls2.readFromDB(env, dbi)
+        mixNormalNulls2.readFromDB()
 
         assertEquals(methodKey, mixNormalNulls2.normInt)
-        Assertions.assertNotNull(mixNormalNulls2.nullableInt)
+        assertNotNull(mixNormalNulls2.nullableInt)
         assertEquals(35, mixNormalNulls2.nullableInt!!)
         assertEquals("This is something I guess", mixNormalNulls2.normalString)
-        Assertions.assertNull(mixNormalNulls2.aNullableString)
+        assertNull(mixNormalNulls2.aNullableString)
     }
 
+    /*
     @Test
     fun `Test shrink VarSize does not break`() {
         val methodKey = nextID

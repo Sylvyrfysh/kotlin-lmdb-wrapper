@@ -1,14 +1,29 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
-import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import com.nicholaspjohnson.kotlinlmdbwrapper.BufferType
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
+import org.lwjgl.util.lmdb.MDBStat
+import org.lwjgl.util.lmdb.MDBVal
 import kotlin.reflect.KFunction1
+import kotlin.reflect.KProperty1
 
-open class LMDBDbi<T: BaseLMDBObject<T>>(private val name: String, val nullStoreOption: NullStoreOption, private val constructor: KFunction1<BufferType, T>, private val flags: Int = 0) {
+open class LMDBDbi<T : BaseLMDBObject<T>>(
+    val name: String,
+    val nullStoreOption: NullStoreOption,
+    private val constructor: KFunction1<BufferType, T>,
+    private val flags: Int = 0
+) {
+    private lateinit var constOffsets: Map<KProperty1<T, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>
+
+    internal lateinit var nameToIndices: Map<String, Int> //Name to index of position
+    internal lateinit var nullables: Array<Boolean>
+
     internal var handle: Int = -1
         private set
     internal lateinit var env: LMDBEnv
@@ -29,10 +44,77 @@ open class LMDBDbi<T: BaseLMDBObject<T>>(private val name: String, val nullStore
             LMDB.mdb_txn_commit(pp[0])
         }
 
-        val obj = constructor(BufferType.None)
+        val obj = constructor(BufferType.DbiObject)
         obj.setUsed()
-        val constOffsets = obj.constSizeMap
+        constOffsets = obj.constSizeMap
+        nameToIndices = obj.nameToIndices
+        nullables = obj.nullables
 
         isInit = true
+    }
+
+    fun <M> getElementsWithEquality(prop: KProperty1<T, M>, value: M): List<T> {
+        require(isInit)
+        val (offset, nullable, companion) = constOffsets.getValue(prop)
+        val ret = ArrayList<T>()
+        MemoryStack.stackPush().use { stack ->
+            val pp = stack.mallocPointer(1)
+
+            LMDB_CHECK(LMDB.mdb_txn_begin(env.handle, MemoryUtil.NULL, LMDB.MDB_RDONLY, pp))
+            val txn = pp.get(0)
+
+            LMDB_CHECK(LMDB.mdb_cursor_open(txn, handle, pp.position(0)))
+            val cursor = pp.get(0)
+
+            val data = MDBVal.mallocStack(stack)
+            val key = MDBVal.mallocStack(stack)
+
+            var rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
+
+            while (rc != LMDB.MDB_NOTFOUND) {
+                LMDB_CHECK(rc)
+                val buf = data.mv_data()!!
+                if (prop in constOffsets) {
+                    if (nullable) {
+                        if (AbstractRWP.readNullableHeader(buf, offset)) {
+                            if (value == null) {
+                                ret.add(constructor(BufferType.DBRead(buf)))
+                            }
+                        } else {
+                            if (companion.compReadFn(data.mv_data()!!, offset + 1) == value) {
+                                ret.add(constructor(BufferType.DBRead(buf)))
+                            }
+                        }
+                    } else { //fast-fast path
+                        if (companion.compReadFn(data.mv_data()!!, offset) == value) {
+                            ret.add(constructor(BufferType.DBRead(buf))) // Only create object after confirming
+                        }
+                    }
+                } else {
+                    val item = constructor(BufferType.DBRead(buf))
+                    if (prop.get(item) == value) {
+                        ret.add(item)
+                    }
+                }
+                rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
+            }
+
+            LMDB.mdb_cursor_close(cursor)
+            LMDB.mdb_txn_abort(txn)
+            return ret
+        }
+    }
+
+    fun getNumberOfEntries(): Long {
+        MemoryStack.stackPush().use { stack ->
+            val pp = stack.mallocPointer(1)
+            LMDB.mdb_txn_begin(env.handle, 0L, 0, pp)
+
+            val stat = MDBStat.mallocStack(stack)
+            LMDB.mdb_stat(pp[0], handle, stat)
+
+            LMDB.mdb_txn_abort(pp[0])
+            return stat.ms_entries()
+        }
     }
 }

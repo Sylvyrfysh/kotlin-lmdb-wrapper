@@ -6,10 +6,7 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.*
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.list.CollectionRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map.MapRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KClassifier
-import kotlin.reflect.KFunction1
-import kotlin.reflect.KProperty
+import kotlin.reflect.*
 import kotlin.reflect.full.companionObjectInstance
 
 /**
@@ -36,7 +33,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val nullable = prop.returnType.isMarkedNullable
         val rwpClass =  getRWPClass(type, prop.annotations)
         val rwp = rwpClass.constructors.first().call(obj, nullable)
-        obj.addType(prop, rwp)
+        obj.addType(prop as KProperty1<M, *>, rwp)
         return rwp
     }
 
@@ -105,7 +102,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         check(!isNullable<ItemType>()) { "Null item types are not yet supported!" }
         val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
         val rwp = CollectionRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop, rwp)
+        obj.addType(prop as KProperty1<M, CollectionType>, rwp)
         return rwp
     }
 
@@ -130,7 +127,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val underlyingDataCompanion = underlyingDataCompanionObj as RWPCompanion<AbstractRWP<*, DataType>, DataType>
 
         val rwp = MapRWP(newMapFn, underlyingKeyCompanion, underlyingDataCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop, rwp)
+        obj.addType(prop as KProperty1<M, MapType>, rwp)
         return rwp
     }
 

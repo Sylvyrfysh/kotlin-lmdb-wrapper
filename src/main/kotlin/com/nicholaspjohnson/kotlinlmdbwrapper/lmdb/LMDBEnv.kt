@@ -42,4 +42,9 @@ class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 1024, nu
     fun openDbi(dbi: LMDBDbi<*>) {
         dbi.onLoad(this)
     }
+
+    fun close() {
+        LMDB.mdb_env_close(handle)
+        handle = -1
+    }
 }

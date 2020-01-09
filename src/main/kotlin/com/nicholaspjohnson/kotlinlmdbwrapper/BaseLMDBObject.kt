@@ -30,14 +30,14 @@ import kotlin.reflect.jvm.isAccessible
  * @param[from] The way to create this object
  */
 abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>, from: BufferType) {
-    private val propMap = TreeMap<Triple<String, Boolean, Boolean>, KProperty<*>>(pairComparator)
+    private val propMap: TreeMap<Triple<String, Boolean, Boolean>, KProperty1<M, *>>? = if (from == BufferType.DbiObject) TreeMap(pairComparator) else null
     private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<M, *>>(pairComparator)
 
-    private lateinit var nameToIndices: Map<String, Int> //Name to index of position
-    internal lateinit var constSizeMap: Map<KProperty<*>, Triple<Int, Boolean, RWPCompanion<*, *>?>> //Name of const size items to their positions
+    internal lateinit var nameToIndices: Map<String, Int> //Name to index of position
+    internal lateinit var constSizeMap: Map<KProperty1<M, *>, Triple<Int, Boolean, RWPCompanion<*, *>>> //Name of const size items to their positions
 
     private lateinit var rwpsOrdered: Array<AbstractRWP<M, *>>
-    private lateinit var nullables: Array<Boolean>
+    internal lateinit var nullables: Array<Boolean>
 
     /**
      * Returns the size of this object in-DB
@@ -67,6 +67,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
             is BufferType.DBRead -> {
                 checkBuffer(from.buffer)
                 firstBuf = from.buffer
+                committed = true
+            }
+            is BufferType.DbiObject -> {
+                firstBuf = null
                 committed = true
             }
         }
@@ -105,50 +109,59 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
     /**
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
-    fun addType(prop: KProperty<*>, rwp: AbstractRWP<M, *>) {
+    fun addType(prop: KProperty1<M, *>, rwp: AbstractRWP<M, *>) {
         require(!isInit) { "Cannot add new DB items after first access!" }
         val key = Triple(prop.name, prop.returnType.isMarkedNullable, rwp is ConstSizeRWP<*, *>)
-        require(!propMap.containsKey(key)) { "Cannot have the same name twice!" }
-        propMap[key] = prop
+        require(!(propMap?.containsKey(key) ?: false)) { "Cannot have the same name twice!" }
+        propMap?.set(key, prop)
         rwpsMap[key] = rwp
     }
 
     private fun setTypes() {
-        require(propMap.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
-        val nullableIter = propMap.entries.iterator()
-        this.nullables = Array(propMap.size) {
-            nullableIter.next().value.returnType.isMarkedNullable
-        }
-        val tNameMap = HashMap<String, Int>()
-        val tempIter = rwpsMap.iterator()
-        var offset = 0
-        val writeMap = HashMap<KProperty<*>, Triple<Int, Boolean, RWPCompanion<*, *>?>>()
-        propMap.entries.forEachIndexed { index, s ->
-            tNameMap[s.key.first] = index
-            if (s.key.third /*const size*/ && (!s.key.second /*not-null*/ || (s.key.second && dbi.nullStoreOption == NullStoreOption.SPEED) /*nullable and speed option*/)) {
-                val tin = tempIter.next()
-                println(tin.value::class.companionObjectInstance)
-                writeMap[s.value] = Triple(offset, nullables[index], tin.value::class.companionObjectInstance as RWPCompanion<*, *>?)
-                offset += tin.value.getDiskSize(dbi.nullStoreOption)
-            }
-        }
-        constSizeMap = Collections.unmodifiableMap(writeMap)
-        this.nameToIndices = tNameMap
+        require(rwpsMap.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
         val rwpOrderedIter = rwpsMap.entries.iterator()
-        this.rwpsOrdered = Array(propMap.size) {
+        this.rwpsOrdered = Array(rwpsMap.size) {
             rwpOrderedIter.next().value
+        }
+        if (committed && firstBuf == null) {
+            this.nullables = Array(propMap!!.size) { false }
+            val tNameMap = HashMap<String, Int>()
+            val tempIter = rwpsMap.iterator()
+            var offset = 0
+            val writeMap = HashMap<KProperty1<M, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>()
+            propMap.entries.forEachIndexed { index, s ->
+                nullables[index] = s.value.returnType.isMarkedNullable
+                tNameMap[s.key.first] = index
+                if (s.key.third /*const size*/ && (!s.key.second /*not-null*/ || (s.key.second && dbi.nullStoreOption == NullStoreOption.SPEED) /*nullable and speed option*/)) {
+                    val tin = tempIter.next()
+                    if (tin.value::class.companionObjectInstance is RWPCompanion<*, *>) {
+                        writeMap[s.value] =
+                            Triple(
+                                offset,
+                                nullables[index],
+                                tin.value::class.companionObjectInstance as RWPCompanion<*, *>
+                            )
+                    }
+                    offset += tin.value.getDiskSize(dbi.nullStoreOption)
+                }
+            }
+            constSizeMap = Collections.unmodifiableMap(writeMap)
+            this.nameToIndices = tNameMap
+        } else {
+            this.nameToIndices = dbi.nameToIndices
+            this.nullables = dbi.nullables
         }
     }
 
     /**
      * Initialize the value of the object backed by [kProperty] to [item].
      */
-    protected fun <T> set(kProperty: KProperty0<T>, item: T) {
+    protected fun <T> set(kProperty: KProperty1<M, T>, item: T) {
         require(!isInit) { "Do not allow changing of items after initialization!" }
         val oldAccessible = kProperty.isAccessible
         kProperty.isAccessible = true
         @Suppress("UNCHECKED_CAST")
-        (kProperty.getDelegate() as AbstractRWP<M, T>).setValue(this, kProperty, item)
+        (kProperty.getDelegate(this as M) as AbstractRWP<M, T>).setValue(this, kProperty, item)
         kProperty.isAccessible = oldAccessible
     }
 

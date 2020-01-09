@@ -125,16 +125,6 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
     }
 
     /**
-     * Reads a single byte that tells whether this object is null and/or compacted.
-     * Returns a [Pair] of booleans that are (null, compacted). If null is false, compacted will be false.
-     * If compacted is true, there is no more data for this object after this byte.
-     */
-    private fun readNullableHeader(readBuffer: ByteBuffer, startingOffset: Int): Boolean {
-        val nullableInfoByte: Byte = readBuffer[startingOffset]
-        return (nullableInfoByte and NULLABLE_NULL_BIT) == NULLABLE_NULL_BIT
-    }
-
-    /**
      * Utility pieces
      */
     companion object {
@@ -142,5 +132,15 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
          * The bit to set in the nullable header if this item is null.
          */
         private const val NULLABLE_NULL_BIT = (1 shl 0).toByte()
+
+        /**
+         * Reads a single byte that tells whether this object is null and/or compacted.
+         * Returns a [Pair] of booleans that are (null, compacted). If null is false, compacted will be false.
+         * If compacted is true, there is no more data for this object after this byte.
+         */
+        fun readNullableHeader(readBuffer: ByteBuffer, startingOffset: Int): Boolean {
+            val nullableInfoByte: Byte = readBuffer[startingOffset]
+            return (nullableInfoByte and NULLABLE_NULL_BIT) == NULLABLE_NULL_BIT
+        }
     }
 }
