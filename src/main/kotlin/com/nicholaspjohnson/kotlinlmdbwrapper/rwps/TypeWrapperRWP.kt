@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import java.nio.ByteBuffer
 import kotlin.reflect.KProperty
 
@@ -24,12 +25,20 @@ class TypeWrapperRWP<M: BaseLMDBObject<M>, R, D>(private val underlying: Abstrac
     AbstractRWP<M, R>(lmdbObject, nullable) {
     override val getSize: (R) -> Int = underlying.getSize as (R) -> Int
 
-    override fun writeToDB(writeBuffer: ByteBuffer, startingOffset: Int): Int {
-        return underlying.writeToDB(writeBuffer, startingOffset)
+    override fun writeToDB(
+        writeBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return underlying.writeToDB(writeBuffer, startingOffset, nullStoreOption)
     }
 
-    override fun readFromDB(readBuffer: ByteBuffer, startingOffset: Int): Int {
-        return underlying.readFromDB(readBuffer, startingOffset)
+    override fun readFromDB(
+        readBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return underlying.readFromDB(readBuffer, startingOffset, nullStoreOption)
     }
 
     override fun <T> getValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>): T {

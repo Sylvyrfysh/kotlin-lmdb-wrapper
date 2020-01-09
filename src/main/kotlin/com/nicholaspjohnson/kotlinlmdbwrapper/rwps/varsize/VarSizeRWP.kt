@@ -2,6 +2,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
@@ -34,8 +35,12 @@ abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>
         sz + sz.toLong().getVarLongSize()
     }
 
-    override fun writeToDB(writeBuffer: ByteBuffer, startingOffset: Int): Int {
-        return write(writeBuffer, startingOffset) { off ->
+    override fun writeToDB(
+        writeBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return write(writeBuffer, startingOffset, NullStoreOption.SIZE) { off -> //pass NullStoreOption.SIZE to make call fail faster
             val diskSize = getItemOnlySize(field!!).toLong()
             writeBuffer.writeVarLong(off, diskSize)
             writeFn(writeBuffer, off + diskSize.getVarLongSize(), field!!)
@@ -43,8 +48,12 @@ abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>
         }
     }
 
-    override fun readFromDB(readBuffer: ByteBuffer, startingOffset: Int): Int {
-        return read(readBuffer, startingOffset) { off ->
+    override fun readFromDB(
+        readBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return read(readBuffer, startingOffset, NullStoreOption.SIZE) { off -> //pass NullStoreOption.SIZE to make call fail faster
             val diskSize = readBuffer.readVarLong(off)
             readBuffer.limit((off + diskSize.getVarLongSize() + diskSize).toInt())
             readBuffer.position(off + diskSize.getVarLongSize())

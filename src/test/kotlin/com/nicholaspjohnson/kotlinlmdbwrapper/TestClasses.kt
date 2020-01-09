@@ -31,8 +31,8 @@ class MixNormalNulls(data: BufferType): BaseLMDBObject<MixNormalNulls>(Companion
     companion object: LMDBDbi<MixNormalNulls>("mix_normal_nulls", NullStoreOption.SIZE, ::MixNormalNulls, LMDB.MDB_INTEGERKEY)
 }
 
-/*
-class AllTypesObject: BaseLMDBObject<AllTypesObject>(BufferType.None) {
+class AllTypesObject(data: BufferType): BaseLMDBObject<AllTypesObject>(Companion, data) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, long)
     }
@@ -48,9 +48,13 @@ class AllTypesObject: BaseLMDBObject<AllTypesObject>(BufferType.None) {
     @VarLong
     var varlong: Long by db
     var varchar: String by db
+    var nullableInt: Int? by db
+
+    companion object: LMDBDbi<AllTypesObject>("all_types_object", NullStoreOption.SPEED, ::AllTypesObject, LMDB.MDB_INTEGERKEY)
 }
 
-class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(BufferType.None) {
+class MultipleVarLongs(data: BufferType): BaseLMDBObject<MultipleVarLongs>(Companion, data) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, first)
     }
@@ -59,8 +63,11 @@ class MultipleVarLongs: BaseLMDBObject<MultipleVarLongs>(BufferType.None) {
     var first: Long by db
     @VarLong
     var second: Long by db
+
+    companion object: LMDBDbi<MultipleVarLongs>("multi_varlongs", NullStoreOption.SIZE, ::MultipleVarLongs, LMDB.MDB_INTEGERKEY)
 }
 
+/*
 class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)

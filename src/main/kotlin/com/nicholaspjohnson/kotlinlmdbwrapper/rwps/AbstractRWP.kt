@@ -48,25 +48,33 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
     /**
      * Writes to [writeBuffer] at [startingOffset] and returns how many bytes were written.
      */
-    abstract fun writeToDB(writeBuffer: ByteBuffer, startingOffset: Int): Int
+    abstract fun writeToDB(
+        writeBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int
 
     /**
      * Reads from [readBuffer] at [startingOffset] and returns how many bytes were read.
      */
-    abstract fun readFromDB(readBuffer: ByteBuffer, startingOffset: Int): Int
+    abstract fun readFromDB(
+        readBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int
 
     /**
      * Internal helper method for writing an object. If the object is nullable, it will write a nullable header at [startingOffset].
      * It will call the specified internal write function with the correct [startingOffset] if the backing object is not null.
      * Returns the number of bytes written.
      */
-    protected fun write(writeBuffer: ByteBuffer, startingOffset: Int, writeFunc: (Int) -> Int): Int {
+    protected fun write(writeBuffer: ByteBuffer, startingOffset: Int, nullStoreOption: NullStoreOption, writeFunc: (Int) -> Int): Int {
         if (nullable) {
             writeNullableHeader(writeBuffer, startingOffset)
             if (field != null) {
                 return 1 + writeFunc(startingOffset + 1)
             }
-            return 1
+            return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) (this as ConstSizeRWP<*, *>).itemSize else 0
         } else {
             return writeFunc(startingOffset)
         }
@@ -77,38 +85,46 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
      * It will call the specified internal read function with the correct [startingOffset] if the backing object is not null.
      * Returns the number of bytes read.
      */
-    protected fun read(readBuffer: ByteBuffer, startingOffset: Int, readFunc: (Int) -> Int): Int {
+    protected fun read(readBuffer: ByteBuffer, startingOffset: Int, nullStoreOption: NullStoreOption, readFunc: (Int) -> Int): Int {
         if (nullable) {
             val isNull = readNullableHeader(readBuffer, startingOffset)
             if (isNull) {
-                return 1
+                return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) (this as ConstSizeRWP<*, *>).itemSize else 0
             }
             return 1 + readFunc(startingOffset + 1)
         }
         return readFunc(startingOffset)
     }
 
+    private var size = 0
+    private var sizeIsCalculated = false
+
     /**
      * Returns the number of bytes this object will be in DB.
      */
     override fun getDiskSize(nullStoreOption: NullStoreOption): Int {
-        return if (nullable) {
-            return if (field == null) {
-                if (nullStoreOption == NullStoreOption.SIZE) {
-                    1
-                } else if (this is ConstSizeRWP<M, *>) {
-                    1 + (this as ConstSizeRWP<M, *>).itemSize
-                } else {
-                    1
-                }
-            } else {
-                1 + getSize(field!!)
-            }
-        } else if (this is ConstSizeRWP<M, *>) {
-            (this as ConstSizeRWP<M, *>).itemSize
-        } else {
-            getSize(field!!)
+        if (sizeIsCalculated) {
+            return size
         }
+
+        val localSize = when {
+            nullable -> {
+                if (field == null) {
+                    1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) itemSize else 0
+                } else {
+                    1 + getSize(field!!)
+                }
+            }
+            this is ConstSizeRWP<M, *> -> itemSize
+            else -> getSize(field!!)
+        }
+
+        if ((!nullable || nullStoreOption == NullStoreOption.SPEED) && this is ConstSizeRWP<*, *>) {
+            size = localSize
+            sizeIsCalculated = true
+        }
+
+        return localSize
     }
 
     /**

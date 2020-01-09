@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import java.nio.ByteBuffer
 
@@ -28,15 +29,23 @@ abstract class ConstSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<
 
     override val getSize: (R) -> Int = { itemSize }
 
-    override fun writeToDB(writeBuffer: ByteBuffer, startingOffset: Int): Int {
-        return write(writeBuffer, startingOffset) { off ->
+    override fun writeToDB(
+        writeBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return write(writeBuffer, startingOffset, nullStoreOption) { off ->
             writeFn(writeBuffer, off, field!!)
             return@write itemSize
         }
     }
 
-    override fun readFromDB(readBuffer: ByteBuffer, startingOffset: Int): Int {
-        return read(readBuffer, startingOffset) { off ->
+    override fun readFromDB(
+        readBuffer: ByteBuffer,
+        startingOffset: Int,
+        nullStoreOption: NullStoreOption
+    ): Int {
+        return read(readBuffer, startingOffset, nullStoreOption) { off ->
             field = readFn(readBuffer, off)
             return@read itemSize
         }

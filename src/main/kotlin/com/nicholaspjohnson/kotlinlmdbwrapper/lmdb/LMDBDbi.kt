@@ -10,6 +10,7 @@ import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBStat
 import org.lwjgl.util.lmdb.MDBVal
+import java.nio.ByteBuffer
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty1
 
@@ -55,8 +56,16 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
 
     fun <M> getElementsWithEquality(prop: KProperty1<T, M>, value: M): List<T> {
         require(isInit)
-        val (offset, nullable, companion) = constOffsets.getValue(prop)
+        val (offset, nullable, companion) = constOffsets[prop] ?: Triple(0, false, null)
         val ret = ArrayList<T>()
+
+        val fastPath: Boolean = prop in constOffsets
+        val fastMethod = if (nullable) {
+                ::checkFastNullPath
+            } else {
+                ::checkFastPath
+            }
+
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
 
@@ -73,27 +82,15 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
 
             while (rc != LMDB.MDB_NOTFOUND) {
                 LMDB_CHECK(rc)
-                val buf = data.mv_data()!!
-                if (prop in constOffsets) {
-                    if (nullable) {
-                        if (AbstractRWP.readNullableHeader(buf, offset)) {
-                            if (value == null) {
-                                ret.add(constructor(BufferType.DBRead(buf)))
-                            }
-                        } else {
-                            if (companion.compReadFn(data.mv_data()!!, offset + 1) == value) {
-                                ret.add(constructor(BufferType.DBRead(buf)))
-                            }
-                        }
-                    } else { //fast-fast path
-                        if (companion.compReadFn(data.mv_data()!!, offset) == value) {
-                            ret.add(constructor(BufferType.DBRead(buf))) // Only create object after confirming
-                        }
+                val buffer = data.mv_data()!!
+                if (fastPath) {
+                    if (fastMethod.invoke(companion, value, buffer, offset)) {
+                        ret += constructor(BufferType.DBRead(buffer))
                     }
                 } else {
-                    val item = constructor(BufferType.DBRead(buf))
-                    if (prop.get(item) == value) {
-                        ret.add(item)
+                    val item = constructor(BufferType.DBRead(buffer))
+                    if (checkSlowPath(prop, value, item)) {
+                        ret += item
                     }
                 }
                 rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
@@ -103,6 +100,35 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
             LMDB.mdb_txn_abort(txn)
             return ret
         }
+    }
+
+    /**
+     * If this is called, [prop] is a non-const size property.
+     * This means that we need to load the whole object to make sure we have the correct offsets.
+     */
+    private fun checkSlowPath(prop: KProperty1<T, *>, value: Any?, item: T): Boolean {
+        return prop.get(item) == value
+    }
+
+    /**
+     * If this is called, we have a speed-optimized database with a potentially null item.
+     * We first do a null check, since if both are null we can return true.
+     * Otherwise, if we didn't read a null, we check the fast path at an offset of 1.
+     */
+    private fun checkFastNullPath(companion: RWPCompanion<*, *>?, value: Any?, buffer: ByteBuffer, offset: Int): Boolean {
+        return if (AbstractRWP.readNullableHeader(buffer, offset)) {
+            return value == null
+        } else {
+            if (value == null) false else checkFastPath(companion, value, buffer, offset + 1)
+        }
+    }
+
+    /**
+     * If this is called, we have a non-null const-size object.
+     * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
+     */
+    private fun checkFastPath(companion: RWPCompanion<*, *>?, value: Any?, buffer: ByteBuffer, offset: Int): Boolean {
+        return companion!!.compReadFn(buffer, offset) == value
     }
 
     fun getNumberOfEntries(): Long {

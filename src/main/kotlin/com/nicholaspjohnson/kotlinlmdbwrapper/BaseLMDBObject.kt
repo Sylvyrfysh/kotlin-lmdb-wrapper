@@ -15,8 +15,6 @@ import java.util.*
 import kotlin.Comparator
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.reflect.KProperty
-import kotlin.reflect.KProperty0
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.jvm.isAccessible
@@ -102,7 +100,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
 
         var off = 0
         for (i in rwpsOrdered) {
-            off += i.readFromDB(newData, off)
+            off += i.readFromDB(newData, off, dbi.nullStoreOption)
         }
     }
 
@@ -208,7 +206,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
                 val writeDB = dv.mv_data()!!
                 var off = 0
                 for (i in rwpsOrdered) {
-                    off += i.writeToDB(writeDB, off)
+                    off += i.writeToDB(writeDB, off, dbi.nullStoreOption)
                 }
 
                 LMDB_CHECK(mdb_txn_commit(txn))
@@ -287,7 +285,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
                 dv.mv_size(size.toLong())
                 var off = 0
                 for (i in rwpsOrdered) {
-                    off += i.writeToDB(dv.mv_data()!!, off)
+                    off += i.writeToDB(dv.mv_data()!!, off, dbi.nullStoreOption)
                 }
                 dv
             } else {

@@ -30,6 +30,8 @@ object BasicDBTester {
         env = LMDBEnv(Paths.get("db"), numDbis = 32)
         env.openDbi(TestObj)
         env.openDbi(MixNormalNulls)
+        env.openDbi(MultipleVarLongs)
+        env.openDbi(AllTypesObject)
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -116,7 +118,6 @@ object BasicDBTester {
         assertNull(mixNormalNulls2.aNullableString)
     }
 
-    /*
     @Test
     fun `Test shrink VarSize does not break`() {
         val methodKey = nextID
@@ -124,11 +125,11 @@ object BasicDBTester {
         fs1.first = Long.MAX_VALUE
         fs1.second = 2
         fs1.first = methodKey.toLong()
-        fs1.writeInSingleTX(env, dbi)
+        fs1.writeInSingleTX()
 
         val fs2 = MultipleVarLongs()
         fs2.first = methodKey.toLong()
-        fs2.readFromDB(env, dbi)
+        fs2.readFromDB()
 
         assertEquals(2L, fs2.second)
     }
@@ -147,6 +148,7 @@ object BasicDBTester {
         val double = 31876915.31568135
         val varlong = 156937804914256L
         val varchar = "This is a testing string. It isn't that special."
+        val nullableInt: Int? = 898
 
         val ato = AllTypesObject()
         ato.bool = bool
@@ -159,13 +161,14 @@ object BasicDBTester {
         ato.double = double
         ato.varlong = varlong
         ato.varchar = varchar
+        ato.nullableInt = nullableInt
 
-        ato.writeInSingleTX(env, dbi)
+        ato.writeInSingleTX()
 
         val ato2 = AllTypesObject()
         ato2.long = methodKey
 
-        ato2.readFromDB(env, dbi)
+        ato2.readFromDB()
 
         assertEquals(bool, ato2.bool)
         assertEquals(byte, ato2.byte)
@@ -177,8 +180,15 @@ object BasicDBTester {
         assertEquals(double, ato2.double)
         assertEquals(varlong, ato2.varlong)
         assertEquals(varchar, ato2.varchar)
+        assertEquals(nullableInt, ato2.nullableInt)
+
+        assertEquals(1, AllTypesObject.getElementsWithEquality(AllTypesObject::bool, ato.bool).size)
+        assertEquals(1, AllTypesObject.getElementsWithEquality(AllTypesObject::varlong, ato.varlong).size)
+        assertEquals(1, AllTypesObject.getElementsWithEquality(AllTypesObject::nullableInt, ato.nullableInt).size)
+        assertEquals(0, AllTypesObject.getElementsWithEquality(AllTypesObject::nullableInt, null).size)
     }
 
+    /*
     @Test
     fun `Test basic ByteArray size setting and loading`() {
         val methodKey = nextID.toLong()
