@@ -176,7 +176,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
     /**
      * Returns a key that fits in the [keyBuffer]
      */
-    protected abstract fun keyFunc(keyBuffer: ByteBuffer)
+    internal abstract fun keyFunc(keyBuffer: ByteBuffer)
 
     /**
      * Writes only this object into the [dbi] of [env].
