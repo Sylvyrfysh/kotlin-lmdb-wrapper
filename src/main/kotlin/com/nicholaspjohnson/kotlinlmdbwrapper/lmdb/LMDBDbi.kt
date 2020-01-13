@@ -54,11 +54,11 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         isInit = true
     }
 
-    private fun cursor(block: (Long, MDBVal, MDBVal) -> Unit) {
+    private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
 
-            LMDB_CHECK(LMDB.mdb_txn_begin(env.handle, MemoryUtil.NULL, LMDB.MDB_RDONLY, pp))
+            LMDB_CHECK(LMDB.mdb_txn_begin(env.handle, MemoryUtil.NULL, if (readOnly) LMDB.MDB_RDONLY else 0, pp))
             val txn = pp.get(0)
 
             LMDB_CHECK(LMDB.mdb_cursor_open(txn, handle, pp.position(0)))
@@ -74,8 +74,8 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         }
     }
 
-    private fun cursorLoopKeyRange(lowKeyObject: T, highKeyObject: T, inclusive: Boolean, block: (ByteBuffer) -> Unit) {
-        val rangeLimit = if (inclusive) 1 else 0
+    private fun cursorLoopKeyRange(lowKeyObject: T, highKeyObject: T, endInclusive: Boolean, block: (ByteBuffer) -> Unit) {
+        val rangeLimit = if (endInclusive) 1 else 0
         cursor { cursor, key, data ->
             MemoryStack.stackPush().use { stack ->
                 val txn = LMDB.mdb_cursor_txn(cursor)
@@ -183,9 +183,9 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         return ret
     }
 
-    fun getElementsByKeyRange(lowKeyObject: T, highKeyObject: T, inclusive: Boolean = false): List<T> {
+    fun getElementsByKeyRange(lowKeyObject: T, highKeyObject: T, endInclusive: Boolean = false): List<T> {
         val ret = ArrayList<T>()
-        cursorLoopKeyRange(lowKeyObject, highKeyObject, inclusive) {
+        cursorLoopKeyRange(lowKeyObject, highKeyObject, endInclusive) {
             ret += constructor(BufferType.DBRead(it))
         }
         return ret
