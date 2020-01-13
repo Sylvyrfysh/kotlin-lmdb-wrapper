@@ -70,7 +70,11 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
             block(cursor, key, data)
 
             LMDB.mdb_cursor_close(cursor)
-            LMDB.mdb_txn_abort(txn)
+            if (readOnly) {
+                LMDB.mdb_txn_abort(txn)
+            } else {
+                LMDB_CHECK(LMDB.mdb_txn_commit(txn))
+            }
         }
     }
 
@@ -189,6 +193,27 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
             ret += constructor(BufferType.DBRead(it))
         }
         return ret
+    }
+
+    fun writeMultiple(objects: List<T>) {
+        if (objects.isEmpty()) {
+            return
+        }
+        cursor(false) { cursor, key, data ->
+            MemoryStack.stackPush().use { stack ->
+                key.mv_data(stack.malloc(objects[0].keySize()))
+                for (item in objects) {
+                    val itemKeySize = item.keySize()
+                    if (itemKeySize.toLong() != key.mv_size()) {
+                        key.mv_data(stack.malloc(itemKeySize))
+                    }
+                    data.mv_size(item.size.toLong())
+                    LMDB_CHECK(LMDB.mdb_cursor_put(cursor, key, data, LMDB.MDB_RESERVE))
+
+                    item.writeToBuffer(data.mv_data()!!)
+                }
+            }
+        }
     }
 
     /**

@@ -178,6 +178,13 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
      */
     internal abstract fun keyFunc(keyBuffer: ByteBuffer)
 
+    internal fun writeToBuffer(buffer: ByteBuffer) {
+        var off = 0
+        for (i in rwpsOrdered) {
+            off += i.writeToDB(buffer, off, dbi.nullStoreOption)
+        }
+    }
+
     /**
      * Writes only this object into the [dbi] of [env].
      * The key will be the return of [keyFunc].
@@ -203,11 +210,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
             try {
                 LMDB_CHECK(mdb_put(txn, dbi.handle, kv, dv, MDB_RESERVE))
 
-                val writeDB = dv.mv_data()!!
-                var off = 0
-                for (i in rwpsOrdered) {
-                    off += i.writeToDB(writeDB, off, dbi.nullStoreOption)
-                }
+                writeToBuffer(dv.mv_data()!!)
 
                 LMDB_CHECK(mdb_txn_commit(txn))
             } catch (t: Throwable) {
