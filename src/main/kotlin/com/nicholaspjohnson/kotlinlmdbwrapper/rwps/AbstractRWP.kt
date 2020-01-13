@@ -74,7 +74,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
             if (field != null) {
                 return 1 + writeFunc(startingOffset + 1)
             }
-            return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) (this as ConstSizeRWP<*, *>).itemSize else 0
+            return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) itemSize else 0
         } else {
             return writeFunc(startingOffset)
         }
@@ -89,7 +89,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
         if (nullable) {
             val isNull = readNullableHeader(readBuffer, startingOffset)
             if (isNull) {
-                return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) (this as ConstSizeRWP<*, *>).itemSize else 0
+                return 1 + if (nullStoreOption == NullStoreOption.SPEED && this is ConstSizeRWP<*, *>) itemSize else 0
             }
             return 1 + readFunc(startingOffset + 1)
         }
