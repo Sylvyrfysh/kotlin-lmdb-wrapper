@@ -41,7 +41,10 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
      * Returns the size of this object in-DB
      */
     val size: Int
-        get() = rwpsOrdered.map{ it.getDiskSize(dbi.nullStoreOption) }.sum()
+        get() {
+            setUsed()
+            return rwpsOrdered.map{ it.getDiskSize(dbi.nullStoreOption) }.sum()
+        }
 
     /**
      * True if this object has been committed to the DB, or read from the DB and not modified.

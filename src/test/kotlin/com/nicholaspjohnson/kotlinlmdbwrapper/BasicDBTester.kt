@@ -32,6 +32,7 @@ object BasicDBTester {
         env.openDbi(MixNormalNulls)
         env.openDbi(MultipleVarLongs)
         env.openDbi(AllTypesObject)
+        env.openDbi(MultiWrite)
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -186,6 +187,28 @@ object BasicDBTester {
         assertEquals(1, AllTypesObject.getElementsWithEquality(AllTypesObject::varlong, ato.varlong).size)
         assertEquals(1, AllTypesObject.getElementsWithEquality(AllTypesObject::nullableInt, ato.nullableInt).size)
         assertEquals(0, AllTypesObject.getElementsWithEquality(AllTypesObject::nullableInt, null).size)
+    }
+
+    @Test
+    fun `Test write multiple`() {
+        val itemsToWrite = Array(10) {
+            val mw = MultiWrite()
+            mw.key = it.toLong()
+            mw.data = 100L + (it * 10)
+            mw
+        }
+
+        assertEquals(0, MultiWrite.getNumberOfEntries())
+
+        MultiWrite.writeMultiple(itemsToWrite)
+
+        assertEquals(10, MultiWrite.getNumberOfEntries())
+
+        assertEquals(5, MultiWrite.getElementsByKeyRange(MultiWrite().apply { key = 0L }, MultiWrite().apply { key = 5L }).size)
+        assertEquals(6, MultiWrite.getElementsByKeyRange(MultiWrite().apply { key = 0L }, MultiWrite().apply { key = 5L }, endInclusive = true).size)
+
+        assertEquals(1, MultiWrite.getElementsWithEquality(MultiWrite::data, 110).size)
+        assertEquals(0, MultiWrite.getElementsWithEquality(MultiWrite::data, 111).size)
     }
 
     /*

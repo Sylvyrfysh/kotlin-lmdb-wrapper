@@ -67,6 +67,18 @@ class MultipleVarLongs(data: BufferType): BaseLMDBObject<MultipleVarLongs>(Compa
     companion object: LMDBDbi<MultipleVarLongs>("multi_varlongs", NullStoreOption.SIZE, ::MultipleVarLongs, LMDB.MDB_INTEGERKEY)
 }
 
+class MultiWrite(data: BufferType): BaseLMDBObject<MultiWrite>(Companion, data) {
+    constructor(): this(BufferType.None)
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var data: Long by db
+
+    companion object: LMDBDbi<MultiWrite>("multi_write", NullStoreOption.SPEED, ::MultiWrite, LMDB.MDB_INTEGERKEY)
+}
+
 /*
 class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {

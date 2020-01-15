@@ -195,18 +195,23 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         return ret
     }
 
-    fun writeMultiple(objects: List<T>) {
-        if (objects.isEmpty()) {
+    fun writeMultiple(objects: Array<T>) = writeMultiple(objects.iterator())
+
+    fun writeMultiple(objects: Iterable<T>) = writeMultiple(objects.iterator())
+
+    fun writeMultiple(iterator: Iterator<T>) {
+        if (!iterator.hasNext()) {
             return
         }
         cursor(false) { cursor, key, data ->
             MemoryStack.stackPush().use { stack ->
-                key.mv_data(stack.malloc(objects[0].keySize()))
-                for (item in objects) {
+                key.mv_data(stack.malloc(0))
+                for (item in iterator) {
                     val itemKeySize = item.keySize()
                     if (itemKeySize.toLong() != key.mv_size()) {
                         key.mv_data(stack.malloc(itemKeySize))
                     }
+                    item.keyFunc(key.mv_data()!!)
                     data.mv_size(item.size.toLong())
                     LMDB_CHECK(LMDB.mdb_cursor_put(cursor, key, data, LMDB.MDB_RESERVE))
 
