@@ -210,6 +210,8 @@ object BasicDBTester {
 
         assertEquals(1, MultiWrite.getElementsWithEquality(MultiWrite::data, 110).size)
         assertEquals(0, MultiWrite.getElementsWithEquality(MultiWrite::data, 111).size)
+
+        assertEquals(3, MultiWrite.getElementsWithEqualityFunction(MultiWrite::data) { it >= 170 }.size)
     }
 
     @Test

@@ -164,9 +164,9 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
 
         val fastPath: Boolean = prop in constOffsets
         val fastMethod = if (nullable) {
-            ::checkFastNullPath
+            ::checkKnownFastNullPath
         } else {
-            ::checkFastPath
+            ::checkKnownFastPath
         }
 
         if (fastPath) {
@@ -178,7 +178,34 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         } else {
             cursorLoopFull { buffer ->
                 val item = constructor(BufferType.DBRead(buffer))
-                if (checkSlowPath(prop, value, item)) {
+                if (checkKnownSlowPath(prop, value, item)) {
+                    ret += item
+                }
+            }
+        }
+
+        return ret
+    }
+
+    fun <M> getElementsWithEqualityFunction(prop: KProperty1<T, M>, equalityFunction: (M) -> Boolean): List<T> {
+        require(isInit)
+        val (offset, _, companion) = constOffsets[prop] ?: Triple(0, false, null)
+        val ret = ArrayList<T>()
+
+        val fastPath: Boolean = prop in constOffsets
+
+        @Suppress("UNCHECKED_CAST") val useFunc = equalityFunction as (Any?) -> Boolean
+
+        if (fastPath) {
+            cursorLoopFull { buffer ->
+                if (checkEqualityFastPath(companion!!, useFunc, buffer, offset)) {
+                    ret += constructor(BufferType.DBRead(buffer))
+                }
+            }
+        } else {
+            cursorLoopFull { buffer ->
+                val item = constructor(BufferType.DBRead(buffer))
+                if (checkEqualitySlowPath(prop, useFunc, item)) {
                     ret += item
                 }
             }
@@ -191,7 +218,7 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         val fastChecksList = equalities.filter { it.first in constOffsets }
         val fastChecks = Array(fastChecksList.size) {
             val details = constOffsets.getValue(fastChecksList[it].first)
-            Triple(if (details.second) ::checkFastNullPath else ::checkFastPath, details, fastChecksList[it].second)
+            Triple(if (details.second) ::checkKnownFastNullPath else ::checkKnownFastPath, details, fastChecksList[it].second)
         }
         val slowChecks = equalities.filterNot { it.first in constOffsets }.toTypedArray()
 
@@ -209,7 +236,7 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
                 index = 0
                 while (cont && index < slowChecks.size) {
                     val (prop, value) = slowChecks[index++]
-                    cont = cont and checkSlowPath(prop, value, item)
+                    cont = cont and checkKnownSlowPath(prop, value, item)
                 }
                 if (cont) {
                     ret += item
@@ -266,8 +293,16 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
      * If this is called, [prop] is a non-const size property.
      * This means that we need to load the whole object to make sure we have the correct offsets.
      */
-    private fun checkSlowPath(prop: KProperty1<T, *>, value: Any?, item: T): Boolean {
+    private fun checkKnownSlowPath(prop: KProperty1<T, *>, value: Any?, item: T): Boolean {
         return prop.get(item) == value
+    }
+
+    /**
+     * If this is called, [prop] is a non-const size property.
+     * This means that we need to load the whole object to make sure we have the correct offsets.
+     */
+    private fun checkEqualitySlowPath(prop: KProperty1<T, *>, function: (Any?) -> Boolean, item: T): Boolean {
+        return function(prop.get(item))
     }
 
     /**
@@ -275,7 +310,7 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
      * We first do a null check, since if both are null we can return true.
      * Otherwise, if we didn't read a null, we check the fast path at an offset of 1.
      */
-    private fun checkFastNullPath(
+    private fun checkKnownFastNullPath(
         companion: RWPCompanion<*, *>,
         value: Any?,
         buffer: ByteBuffer,
@@ -284,7 +319,7 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         return if (AbstractRWP.readNullableHeader(buffer, offset)) {
             return value == null
         } else {
-            if (value == null) false else checkFastPath(companion, value, buffer, offset + 1)
+            if (value == null) false else checkKnownFastPath(companion, value, buffer, offset + 1)
         }
     }
 
@@ -292,8 +327,16 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
      * If this is called, we have a non-null const-size object.
      * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
      */
-    private fun checkFastPath(companion: RWPCompanion<*, *>, value: Any?, buffer: ByteBuffer, offset: Int): Boolean {
+    private fun checkKnownFastPath(companion: RWPCompanion<*, *>, value: Any?, buffer: ByteBuffer, offset: Int): Boolean {
         return companion.compReadFn(buffer, offset) == value
+    }
+
+    /**
+     * If this is called, we have a non-null const-size object.
+     * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
+     */
+    private fun checkEqualityFastPath(companion: RWPCompanion<*, *>, function: (Any?) -> Boolean, buffer: ByteBuffer, offset: Int): Boolean {
+        return function(companion.compReadFn(buffer, offset))
     }
 
     /**
