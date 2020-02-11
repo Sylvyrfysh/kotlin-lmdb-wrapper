@@ -93,7 +93,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
      * Uses [newListFn] to create anew mutable version of [CollectionType] that will have items added on DB read that will then be assigned to the backing field.
      */
     inline fun <reified ItemType, reified CollectionType: List<ItemType>> collection(
-        prop: KProperty<CollectionType>,
+        prop: KProperty1<M, CollectionType>,
         noinline newListFn: () -> MutableCollection<ItemType>
     ): CollectionRWP<M, ItemType, Collection<ItemType>> {
         val underlyingCompanionObj = getRWPClass(ItemType::class, null).companionObjectInstance
@@ -102,7 +102,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         check(!isNullable<ItemType>()) { "Null item types are not yet supported!" }
         val underlyingCompanion = underlyingCompanionObj as RWPCompanion<AbstractRWP<*, ItemType>, ItemType>
         val rwp = CollectionRWP(newListFn, underlyingCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop as KProperty1<M, CollectionType>, rwp)
+        obj.addType(prop, rwp)
         return rwp
     }
 
@@ -111,7 +111,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
      * Uses [newMapFn] to create anew mutable version of [MapType] that will have items added on DB read that will then be assigned to the backing field.
      */
     inline fun <reified KeyType, reified DataType, reified MapType: Map<KeyType, DataType>> map(
-        prop: KProperty<MapType>,
+        prop: KProperty1<M, MapType>,
         noinline newMapFn: () -> MutableMap<KeyType, DataType>
     ): MapRWP<M, KeyType, DataType, Map<KeyType, DataType>> {
         val underlyingKeyCompanionObj = getRWPClass(KeyType::class, null).companionObjectInstance
@@ -127,7 +127,7 @@ class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val ob
         val underlyingDataCompanion = underlyingDataCompanionObj as RWPCompanion<AbstractRWP<*, DataType>, DataType>
 
         val rwp = MapRWP(newMapFn, underlyingKeyCompanion, underlyingDataCompanion, obj, prop.returnType.isMarkedNullable)
-        obj.addType(prop as KProperty1<M, MapType>, rwp)
+        obj.addType(prop, rwp)
         return rwp
     }
 
