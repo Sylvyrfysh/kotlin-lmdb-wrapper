@@ -49,7 +49,7 @@ open class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 102
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_env_stat(handle, stat)
 
-            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() * stat.ms_overflow_pages())
+            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
         }
     }
 

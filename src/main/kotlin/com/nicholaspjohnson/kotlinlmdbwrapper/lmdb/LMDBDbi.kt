@@ -324,7 +324,7 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
             LMDB.mdb_stat(pp[0], handle, stat)
 
             LMDB.mdb_txn_abort(pp[0])
-            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() * stat.ms_overflow_pages())
+            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
         }
     }
 }
