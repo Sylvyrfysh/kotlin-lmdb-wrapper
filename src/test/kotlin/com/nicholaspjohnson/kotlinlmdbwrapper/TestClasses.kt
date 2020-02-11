@@ -79,6 +79,24 @@ class MultiWrite(data: BufferType): BaseLMDBObject<MultiWrite>(Companion, data) 
     companion object: LMDBDbi<MultiWrite>("multi_write", NullStoreOption.SPEED, ::MultiWrite, LMDB.MDB_INTEGERKEY)
 }
 
+class DefaultSetTesterObject(data: BufferType): BaseLMDBObject<DefaultSetTesterObject>(Companion, data) {
+    constructor(): this(BufferType.None)
+    override fun keyFunc(keyBuffer: ByteBuffer) {
+        keyBuffer.putLong(0, key)
+    }
+
+    var key: Long by db
+    var shouldBeDefault: Long by db
+
+    init {
+        set(DefaultSetTesterObject::shouldBeDefault, initialSet)
+    }
+
+    companion object: LMDBDbi<DefaultSetTesterObject>("default_set", NullStoreOption.SPEED, ::DefaultSetTesterObject, LMDB.MDB_INTEGERKEY) {
+        const val initialSet = 129834765L
+    }
+}
+
 /*
 class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.None) {
     override fun keyFunc(keyBuffer: ByteBuffer) {
@@ -88,23 +106,6 @@ class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.No
     var key: Long by db
     var buffer: ByteArray by db
     var zInt: Int by db
-}
-
-class DefaultSetTesterObject: BaseLMDBObject<DefaultSetTesterObject>(BufferType.None) {
-    override fun keyFunc(keyBuffer: ByteBuffer) {
-        keyBuffer.putLong(0, key)
-    }
-
-    var key: Long by db
-    var shouldBeDefault: Long by db
-
-    init {
-        set(this::shouldBeDefault, initialSet)
-    }
-
-    companion object {
-        const val initialSet = 129834765L
-    }
 }
 
 class MisalignedShortArray(from: BufferType): BaseLMDBObject<MisalignedShortArray>(from) {

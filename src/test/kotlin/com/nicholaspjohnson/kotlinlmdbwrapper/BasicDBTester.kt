@@ -33,6 +33,7 @@ object BasicDBTester {
         env.openDbi(MultipleVarLongs)
         env.openDbi(AllTypesObject)
         env.openDbi(MultiWrite)
+        env.openDbi(DefaultSetTesterObject)
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -209,6 +210,12 @@ object BasicDBTester {
 
         assertEquals(1, MultiWrite.getElementsWithEquality(MultiWrite::data, 110).size)
         assertEquals(0, MultiWrite.getElementsWithEquality(MultiWrite::data, 111).size)
+    }
+
+    @Test
+    fun `Default Set`() {
+        val testObj = DefaultSetTesterObject()
+        assertEquals(DefaultSetTesterObject.initialSet, testObj.shouldBeDefault)
     }
 
     /*
