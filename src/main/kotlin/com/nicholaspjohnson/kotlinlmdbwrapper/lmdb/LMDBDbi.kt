@@ -54,6 +54,14 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         isInit = true
     }
 
+    /**
+     * Closes this dbi.
+     */
+    internal fun onClose(lmdbEnv: LMDBEnv) {
+        LMDB.mdb_dbi_close(lmdbEnv.handle, handle)
+        isInit = false
+    }
+
     private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
@@ -195,10 +203,19 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         return ret
     }
 
-    fun writeMultiple(objects: Array<T>) = writeMultiple(objects.iterator())
+    /**
+     * Overload for [writeMultiple] with and [array].
+     */
+    fun writeMultiple(array: Array<T>) = writeMultiple(array.iterator())
 
-    fun writeMultiple(objects: Iterable<T>) = writeMultiple(objects.iterator())
+    /**
+     * Overload for [writeMultiple] with an [iterable].
+     */
+    fun writeMultiple(iterable: Iterable<T>) = writeMultiple(iterable.iterator())
 
+    /**
+     * Takes an [iterator], then iterates over it and writes each item to the database.
+     */
     fun writeMultiple(iterator: Iterator<T>) {
         if (!iterator.hasNext()) {
             return
@@ -255,6 +272,9 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         return companion.compReadFn(buffer, offset) == value
     }
 
+    /**
+     * Returns the number of entries in the database.
+     */
     fun getNumberOfEntries(): Long {
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
@@ -265,6 +285,22 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
 
             LMDB.mdb_txn_abort(pp[0])
             return stat.ms_entries()
+        }
+    }
+
+    /**
+     * Returns the size of the database in bytes.
+     */
+    fun getDBISize(): Long {
+        MemoryStack.stackPush().use { stack ->
+            val pp = stack.mallocPointer(1)
+            LMDB.mdb_txn_begin(env.handle, 0L, 0, pp)
+
+            val stat = MDBStat.mallocStack(stack)
+            LMDB.mdb_stat(pp[0], handle, stat)
+
+            LMDB.mdb_txn_abort(pp[0])
+            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() * stat.ms_overflow_pages())
         }
     }
 }
