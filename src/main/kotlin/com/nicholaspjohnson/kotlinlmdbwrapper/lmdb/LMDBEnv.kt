@@ -2,12 +2,10 @@ package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import org.lwjgl.system.MemoryStack
-import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBStat
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * Creates a new LMDB environment at [path] with a [startingSize], [numDbis] and with [envFlags].
@@ -71,7 +69,7 @@ open class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 102
     fun openDbi(dbi: LMDBDbi<*>) {
         synchronized(openDBIs) {
             check(openDBIs.add(dbi)) { "Cannot open a dbi which is already open!" }
-            dbi.onLoad(this)
+            dbi.onLoadInternal(this)
         }
     }
 
@@ -82,7 +80,7 @@ open class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 102
     fun closeDbi(dbi: LMDBDbi<*>) {
         synchronized(openDBIs) {
             check(openDBIs.remove(dbi)) { "Cannot close a dbi which is not open!" }
-            dbi.onClose(this)
+            dbi.onCloseInternal(this)
         }
     }
 
@@ -93,7 +91,7 @@ open class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 102
     fun close() {
         check(handle != -1L) { "The environment is not open!" }
         synchronized(openDBIs) {
-            openDBIs.retainAll { it.onClose(this); false }
+            openDBIs.retainAll { it.onCloseInternal(this); false }
             LMDB.mdb_env_close(handle)
             handle = -1
         }

@@ -31,9 +31,10 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
 
     private var isInit = false
 
-    internal fun onLoad(env: LMDBEnv) {
+    internal fun onLoadInternal(env: LMDBEnv) {
         require(!isInit) { "Cannot initialize an already initialized dbi!" }
         this.env = env
+        preLoad()
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             val ip = stack.mallocInt(1)
@@ -52,15 +53,38 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         nullables = obj.nullables
 
         isInit = true
+        postLoad()
     }
+
+    /**
+     * Functionality to call before the database is loaded.
+     */
+    open fun preLoad() {}
+
+    /**
+     * Functionality to call after the database is loaded.
+     */
+    open fun postLoad() {}
 
     /**
      * Closes this dbi.
      */
-    internal fun onClose(lmdbEnv: LMDBEnv) {
+    internal fun onCloseInternal(lmdbEnv: LMDBEnv) {
+        preClose()
         LMDB.mdb_dbi_close(lmdbEnv.handle, handle)
         isInit = false
+        postClose()
     }
+
+    /**
+     * Functionality to call before the database is closed.
+     */
+    open fun preClose() {}
+
+    /**
+     * Functionality to call after the database is closed.
+     */
+    open fun postClose() {}
 
     private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
         MemoryStack.stackPush().use { stack ->
