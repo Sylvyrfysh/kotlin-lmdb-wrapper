@@ -27,11 +27,11 @@ open class LMDBEnv (private val path: Path, startingSize: Long = 1L * 1024 * 102
         LMDB_CHECK(
             LMDB.mdb_env_open(
                 handle,
-                Paths.get("db").apply {
-                    if (!Files.exists(path)) {
-                        Files.createDirectories(path)
+                path.apply {
+                    if (!Files.exists(this)) {
+                        Files.createDirectories(this)
                     } else {
-                        require(Files.isDirectory(path)) {
+                        require(Files.isDirectory(this)) {
                             LMDB.mdb_env_close(handle)
                             "Path must be a directory!"
                         }
