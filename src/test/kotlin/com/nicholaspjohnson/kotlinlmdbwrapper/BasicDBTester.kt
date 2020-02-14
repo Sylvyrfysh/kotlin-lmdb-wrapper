@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.*
+import kotlin.collections.ArrayList
 
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
@@ -34,6 +36,12 @@ object BasicDBTester {
         env.openDbi(AllTypesObject)
         env.openDbi(MultiWrite)
         env.openDbi(DefaultSetTesterObject)
+        env.openDbi(ByteArrayTesterObject)
+        env.openDbi(MisalignedShortArray)
+        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class)
+        env.openDbi(CustomUUIDRWP)
+        env.openDbi(ListTester)
+        env.openDbi(MapTester)
 
         testObj1.key = 1
         testObj1.data = 1234
@@ -220,7 +228,6 @@ object BasicDBTester {
         assertEquals(DefaultSetTesterObject.initialSet, testObj.shouldBeDefault)
     }
 
-    /*
     @Test
     fun `Test basic ByteArray size setting and loading`() {
         val methodKey = nextID.toLong()
@@ -231,13 +238,13 @@ object BasicDBTester {
         bbo.zInt = 5
         bbo.key = methodKey
 
-        bbo.writeInSingleTX(env, dbi)
+        bbo.writeInSingleTX()
 
         val bbo2 = ByteArrayTesterObject()
         bbo2.key = methodKey
         assertNull(bbo2.buffer)
 
-        bbo2.readFromDB(env, dbi)
+        bbo2.readFromDB()
 
         assertArrayEquals(testArr, bbo2.buffer)
     }
@@ -252,11 +259,11 @@ object BasicDBTester {
         writeObj.single = 25.toByte()
         writeObj.zArray = expectArray
 
-        writeObj.writeInSingleTX(env, dbi)
+        writeObj.writeInSingleTX()
 
         val readObj = MisalignedShortArray()
         readObj.key = methodKey
-        readObj.readFromDB(env, dbi)
+        readObj.readFromDB()
 
         assertArrayEquals(expectArray, readObj.zArray)
     }
@@ -270,33 +277,35 @@ object BasicDBTester {
         listObj.key = methodKey
         listObj.list = expectList
 
-        listObj.writeInSingleTX(env, dbi)
+        listObj.writeInSingleTX()
 
         val listObj2 = ListTester()
         listObj2.key = methodKey
-        listObj2.readFromDB(env, dbi)
+        listObj2.readFromDB()
 
         assertLinesMatch(expectList, listObj2.list)
     }
 
     @Test
     fun `Test custom RWP`() {
-        assertThrows<IllegalStateException>("There is no RWP for the type UUID!") { CustomUUIDRWP() }
-
         val methodKey = nextID.toLong()
-        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class)
         val expectUUID = UUID.randomUUID()
 
         val customRWPObject = CustomUUIDRWP()
         customRWPObject.key = methodKey
         customRWPObject.uuid = expectUUID
-        customRWPObject.writeInSingleTX(env, dbi)
+        customRWPObject.writeInSingleTX()
 
         val cObj2 = CustomUUIDRWP()
         cObj2.key = methodKey
-        cObj2.readFromDB(env, dbi)
+        cObj2.readFromDB()
 
         assertEquals(expectUUID, cObj2.uuid)
+    }
+
+    @Test
+    fun `Test no RWP fails`() {
+        assertThrows<IllegalStateException>("There is no RWP for the type class java.io.ByteArrayOutputStream!") { env.openDbi(NoRWP) }
     }
 
     @Test
@@ -308,11 +317,11 @@ object BasicDBTester {
         testObj.key = methodKey
         testObj.map = expectMap
 
-        testObj.writeInSingleTX(env, dbi)
+        testObj.writeInSingleTX()
 
         val mapObj2 = MapTester()
         mapObj2.key = methodKey
-        mapObj2.readFromDB(env, dbi)
+        mapObj2.readFromDB()
 
         assertEquals(expectMap, mapObj2.map)
     }
@@ -327,19 +336,19 @@ object BasicDBTester {
         m1.key = key1
         m1.single = 56.toByte()
         m1.zArray = ShortArray(1)
-        m1.writeInSingleTX(env, multiGetDbi)
+        m1.writeInSingleTX()
         val m2 = MisalignedShortArray()
         m2.key = key2
         m2.single = 57.toByte()
         m2.zArray = ShortArray(2)
-        m2.writeInSingleTX(env, multiGetDbi)
+        m2.writeInSingleTX()
         val m3 = MisalignedShortArray()
         m3.key = key3
         m3.single = 58.toByte()
         m3.zArray = ShortArray(3)
-        m3.writeInSingleTX(env, multiGetDbi)
+        m3.writeInSingleTX()
 
-        val expectM2 = BaseLMDBObject.getObjectsWithValue(env, multiGetDbi, MisalignedShortArray::single, 57.toByte())
+        val expectM2 = MisalignedShortArray.getElementsWithEquality(MisalignedShortArray::single, 57.toByte())
         assertNotNull(expectM2.firstOrNull())
         assertEquals(1, expectM2.size)
         assertEquals(2, expectM2.first().zArray.size)
@@ -355,18 +364,18 @@ object BasicDBTester {
         val l1 = ListTester()
         l1.key = key1
         l1.list = arrayListOf("Strings!", "Cause why not!", eqCheck)
-        l1.writeInSingleTX(env, multiGetDbi2)
+        l1.writeInSingleTX()
         val l2 = ListTester()
         l2.key = key2
         l2.list = arrayListOf("Strings Extra!", "Cause why not though!", "Another for good measure!")
-        l2.writeInSingleTX(env, multiGetDbi2)
+        l2.writeInSingleTX()
 
-        val obj = BaseLMDBObject.getObjectsWithEquality(env, multiGetDbi2, ListTester::list, eqCheck, ArrayList<String>::contains).firstOrNull()
+        val obj = ListTester.getElementsWithEqualityFunction(ListTester::list) { it.contains(eqCheck) }.firstOrNull()
         assertNotNull(obj)
         assertEquals(key1, obj!!.key)
 
-        val obj2 = BaseLMDBObject.getObjectsWithEquality(env, multiGetDbi2, ListTester::list, "Something that doesn't show up", ArrayList<String>::contains).firstOrNull()
-        assertNull(obj2)
+        val obj2 = ListTester.getElementsWithEqualityFunction(ListTester::list) { it.contains("Something that doesn't show up") }
+        assertEquals(0, obj2.size)
     }
 
     @Test
@@ -374,18 +383,17 @@ object BasicDBTester {
         val key1 = nextID
         val dataItem = 12345
 
-        assertFalse(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
+        assertEquals(0, TestObj.getElementsWithEquality(TestObj::data, dataItem).size)
 
         val obj1 = TestObj()
         obj1.key = key1
         obj1.data = 12345
-        obj1.writeInSingleTX(env, multiGetDbi3)
+        obj1.writeInSingleTX()
 
-        assertTrue(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
+        assertEquals(1, TestObj.getElementsWithEquality(TestObj::data, dataItem).size)
 
-        obj1.delete(env, multiGetDbi3)
+        obj1.delete()
 
-        assertFalse(BaseLMDBObject.hasObjectWithValue(env, multiGetDbi3, TestObj::data, dataItem))
+        assertEquals(0, TestObj.getElementsWithEquality(TestObj::data, dataItem).size)
     }
-     */
 }

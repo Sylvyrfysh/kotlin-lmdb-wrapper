@@ -154,6 +154,20 @@ open class LMDBDbi<T : BaseLMDBObject<T>>(
         }
     }
 
+    fun forEach(block: (T) -> Unit) {
+        cursorLoopFull {
+            block(constructor(BufferType.DBRead(it)))
+        }
+    }
+
+    fun getEach(): List<T> {
+        val ret = ArrayList<T>()
+        cursorLoopFull {
+            ret += constructor(BufferType.DBRead(it))
+        }
+        return ret
+    }
+
     fun <M> getElementsWithEquality(toCheck: Pair<KProperty1<T, M>, M>): List<T> =
         getElementsWithEquality(toCheck.first, toCheck.second)
 

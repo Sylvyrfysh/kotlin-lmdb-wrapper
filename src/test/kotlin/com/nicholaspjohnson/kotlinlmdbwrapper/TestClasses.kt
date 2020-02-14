@@ -2,8 +2,13 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBDbi
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
+import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map.MapRWP
 import org.lwjgl.util.lmdb.LMDB
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 class TestObj(data: BufferType): BaseLMDBObject<TestObj>(Companion, data) {
     constructor(): this(BufferType.None)
@@ -97,8 +102,8 @@ class DefaultSetTesterObject(data: BufferType): BaseLMDBObject<DefaultSetTesterO
     }
 }
 
-/*
-class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.None) {
+class ByteArrayTesterObject(data: BufferType): BaseLMDBObject<ByteArrayTesterObject>(Companion, data) {
+    constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -106,9 +111,10 @@ class ByteArrayTesterObject: BaseLMDBObject<ByteArrayTesterObject>(BufferType.No
     var key: Long by db
     var buffer: ByteArray by db
     var zInt: Int by db
+    companion object: LMDBDbi<ByteArrayTesterObject>("byte_array_tester", NullStoreOption.SIZE, ::ByteArrayTesterObject, LMDB.MDB_INTEGERKEY)
 }
 
-class MisalignedShortArray(from: BufferType): BaseLMDBObject<MisalignedShortArray>(from) {
+class MisalignedShortArray(from: BufferType): BaseLMDBObject<MisalignedShortArray>(Companion, from) {
     constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
@@ -117,33 +123,52 @@ class MisalignedShortArray(from: BufferType): BaseLMDBObject<MisalignedShortArra
     var key: Long by db
     var single: Byte by db
     var zArray: ShortArray by db
+
+    companion object: LMDBDbi<MisalignedShortArray>("misaligned_short_array", NullStoreOption.SIZE, ::MisalignedShortArray, LMDB.MDB_INTEGERKEY)
 }
 
-class ListTester(from: BufferType): BaseLMDBObject<ListTester>(from) {
+class ListTester(from: BufferType): BaseLMDBObject<ListTester>(Companion, from) {
     constructor(): this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
 
     var key: Long by db
-    var list: ArrayList<String> by db.collection(this::list) { ArrayList() }
+    var list: ArrayList<String> by db.collection(ListTester::list) { ArrayList() }
+
+    companion object: LMDBDbi<ListTester>("list_tester", NullStoreOption.SIZE, ::ListTester, LMDB.MDB_INTEGERKEY)
 }
 
-class CustomUUIDRWP: BaseLMDBObject<CustomUUIDRWP>(BufferType.None) {
+class CustomUUIDRWP(from: BufferType): BaseLMDBObject<CustomUUIDRWP>(Companion, from) {
+    constructor() : this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
 
     var key: Long by db
     var uuid: UUID by db
+
+    companion object: LMDBDbi<CustomUUIDRWP>("custom_uuid_rwp", NullStoreOption.SIZE, ::CustomUUIDRWP, LMDB.MDB_INTEGERKEY)
 }
 
-class MapTester: BaseLMDBObject<MapTester>(BufferType.None) {
+class MapTester(from: BufferType): BaseLMDBObject<MapTester>(Companion, from) {
+    constructor() : this(BufferType.None)
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
 
     var key: Long by db
-    var map: HashMap<String, Int> by db.map(this::map) { HashMap() }
+    var map: HashMap<String, Int> by db.map(MapTester::map) { HashMap() }
+
+    companion object: LMDBDbi<MapTester>("map_tester", NullStoreOption.SIZE, ::MapTester, LMDB.MDB_INTEGERKEY)
 }
- */
+
+class NoRWP(from: BufferType): BaseLMDBObject<NoRWP>(Companion, from) {
+    constructor() : this(BufferType.None)
+
+    override fun keyFunc(keyBuffer: ByteBuffer) {}
+
+    var none: ByteArrayOutputStream by db // Sufficiently ridiculous to never make serializable
+
+    companion object: LMDBDbi<NoRWP>("no_rwp", NullStoreOption.SIZE, ::NoRWP, LMDB.MDB_INTEGERKEY)
+}
