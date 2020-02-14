@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import java.nio.ByteBuffer
@@ -17,7 +17,7 @@ import kotlin.reflect.KProperty
  * Set up the RWP with the passed in with the underlying object [lmdbObject] that is [nullable].
  *
  */
-abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: BaseLMDBObject<M>, private val nullable: Boolean) : RWPInterface<M> {
+abstract class AbstractRWP<M: LMDBObject<M>, R>(private val lmdbObject: LMDBObject<M>, private val nullable: Boolean) : RWPInterface<M> {
     /**
      * Backing RWP for this field
      */
@@ -32,7 +32,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
      * Sets the [value] of [property] in object [thisRef] of type [M].
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> setValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>, value: T) {
+    override fun <T> setValue(thisRef: LMDBObject<M>, property: KProperty<*>, value: T) {
         field = value as R?
     }
 
@@ -40,7 +40,7 @@ abstract class AbstractRWP<M: BaseLMDBObject<M>, R>(private val lmdbObject: Base
      * Gets the value of [property] in [thisRef] of type [M].
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> getValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>): T {
+    override fun <T> getValue(thisRef: LMDBObject<M>, property: KProperty<*>): T {
         lmdbObject.setUsed()
         return field as T
     }

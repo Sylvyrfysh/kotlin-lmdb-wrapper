@@ -20,14 +20,14 @@ import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.jvm.isAccessible
 
 /**
- * A basic LMDBObject that is of the class [M] which extends [BaseLMDBObject].
+ * A basic LMDBObject that is of the class [M] which extends [LMDBObject].
  *
  * @constructor
  * Initialize the buffers and update the offsets
  *
  * @param[from] The way to create this object
  */
-abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>, from: BufferType) {
+abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: BufferType) {
     private val propMap: TreeMap<Triple<String, Boolean, Boolean>, KProperty1<M, *>>? = if (from == BufferType.DbiObject) TreeMap(pairComparator) else null
     private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<M, *>>(pairComparator)
 
@@ -316,7 +316,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
     }
 
     /**
-     * Helper functions applicable to all [BaseLMDBObject] types
+     * Helper functions applicable to all [LMDBObject] types
      */
     companion object {
         private val pairComparator = Comparator<Triple<String, Boolean, Boolean>> { o1, o2 ->
@@ -334,7 +334,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
         /**
          * Returns true if any item in the [dbi] of [env] has a value of [item] for [property].
          */
-        inline fun <reified M : BaseLMDBObject<M>, T> hasObjectWithValue(
+        inline fun <reified M : LMDBObject<M>, T> hasObjectWithValue(
             env: Long,
             dbi: Int,
             property: KProperty1<M, T>,
@@ -344,7 +344,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
         /**
          * Returns all items in the [dbi] of [env] with a value of [item] for [property]. If none match, an empty list is returned.
          */
-        inline fun <reified M : BaseLMDBObject<M>, T> getObjectsWithValue(
+        inline fun <reified M : LMDBObject<M>, T> getObjectsWithValue(
             env: Long,
             dbi: Int,
             property: KProperty1<M, T>,
@@ -386,7 +386,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
         /**
          * Returns true if any item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
          */
-        inline fun <reified M : BaseLMDBObject<M>, T, R> hasObjectWithEquality(
+        inline fun <reified M : LMDBObject<M>, T, R> hasObjectWithEquality(
             env: Long,
             dbi: Int,
             property: KProperty1<M, T>,
@@ -397,7 +397,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
         /**
          * Returns all items in the [dbi] of [env] with a value of [item] for [property] with [equalityFunc]. If none match, an empty list is returned.
          */
-        inline fun <reified M : BaseLMDBObject<M>, T, R> getObjectsWithEquality(
+        inline fun <reified M : LMDBObject<M>, T, R> getObjectsWithEquality(
             env: Long,
             dbi: Int,
             property: KProperty1<M, T>,
@@ -440,7 +440,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
         /**
          * Iterates over the [dbi] of [env] and passes all items to [block].
          */
-        inline fun <reified M : BaseLMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
+        inline fun <reified M : LMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
             val const =
                 M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
             stackPush().use { stack ->

@@ -3,7 +3,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 import java.nio.ByteBuffer
 
 /**
- * A limited set of options for initializing a [BaseLMDBObject].
+ * A limited set of options for initializing a [LMDBObject].
  */
 sealed class BufferType {
     /**

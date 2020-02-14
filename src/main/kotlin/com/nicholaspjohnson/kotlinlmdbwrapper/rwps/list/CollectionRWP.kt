@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.list
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
  * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  * Holds [newCollectionInstance] and [itemCompanion] for reading and writing purposes.
  */
-class CollectionRWP<M: BaseLMDBObject<M>, ItemType, CollectionType: Collection<ItemType>>(private val newCollectionInstance: () -> MutableCollection<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+class CollectionRWP<M: LMDBObject<M>, ItemType, CollectionType: Collection<ItemType>>(private val newCollectionInstance: () -> MutableCollection<ItemType>, private val itemCompanion: RWPCompanion<*, ItemType>, lmdbObject: LMDBObject<M>, nullable: Boolean) :
     VarSizeRWP<M, CollectionType>(lmdbObject, nullable) {
     /**
      * A function that takes the read buffer and offset and returns the value at that point.

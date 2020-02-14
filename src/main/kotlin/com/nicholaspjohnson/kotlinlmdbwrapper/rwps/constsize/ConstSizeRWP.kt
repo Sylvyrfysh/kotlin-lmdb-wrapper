@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import java.nio.ByteBuffer
@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [nullable] to the underlying [AbstractRWP].
  */
-abstract class ConstSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+abstract class ConstSizeRWP<M: LMDBObject<M>, R>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
     AbstractRWP<M, R>(lmdbObject, nullable) {
     /**
      * The constant size of this item.

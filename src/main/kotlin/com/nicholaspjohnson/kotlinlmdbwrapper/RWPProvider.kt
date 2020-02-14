@@ -16,7 +16,7 @@ import kotlin.reflect.full.companionObjectInstance
  * Takes in the class instance [obj] to provide for.
  */
 @Suppress("UNCHECKED_CAST")
-class RWPProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val obj: BaseLMDBObject<M>) {
+class RWPProvider<M: LMDBObject<M>>(@PublishedApi internal val obj: LMDBObject<M>) {
     /**
      * Provides a delegate for the class instance [thisRef]'s property [prop].
      * Returns a RWPInterface with the right getters and setters.
@@ -26,7 +26,7 @@ class RWPProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val obj: BaseLMDB
     }
 
     /**
-     * Returns an [RWPInterface] that is for [type] on the object [prop], and registers it with the [BaseLMDBObject].
+     * Returns an [RWPInterface] that is for [type] on the object [prop], and registers it with the [LMDBObject].
      */
     @PublishedApi
     internal fun getTypeDelegate(type: KClassifier?, prop: KProperty<*>): RWPInterface<M> {

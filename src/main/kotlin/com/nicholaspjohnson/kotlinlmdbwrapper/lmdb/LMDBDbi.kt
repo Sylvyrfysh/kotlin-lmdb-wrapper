@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.BufferType
 import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
@@ -14,10 +14,10 @@ import java.nio.ByteBuffer
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty1
 
-open class LMDBDbi<T : BaseLMDBObject<T>>(
+open class LMDBDbi<T : LMDBObject<T>>(
     val name: String,
-    val nullStoreOption: NullStoreOption,
     private val constructor: KFunction1<BufferType, T>,
+    internal val nullStoreOption: NullStoreOption = NullStoreOption.SPEED,
     private val flags: Int = 0
 ) {
     private lateinit var constOffsets: Map<KProperty1<T, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>

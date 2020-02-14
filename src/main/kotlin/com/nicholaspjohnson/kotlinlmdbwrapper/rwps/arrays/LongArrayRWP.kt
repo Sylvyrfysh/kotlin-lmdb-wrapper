@@ -1,8 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.arrays
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import java.nio.ByteBuffer
 
@@ -13,7 +12,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  */
-class LongArrayRWP<M: BaseLMDBObject<M>>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean): VarSizeRWP<M, LongArray?>(lmdbObject, nullable) {
+class LongArrayRWP<M: LMDBObject<M>>(lmdbObject: LMDBObject<M>, nullable: Boolean): VarSizeRWP<M, LongArray?>(lmdbObject, nullable) {
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
      */

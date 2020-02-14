@@ -1,10 +1,9 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
-import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.VarSizeRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
@@ -17,11 +16,11 @@ import java.nio.ByteBuffer
  * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  * Holds [newMapInstance], [keyCompanion], and [dataCompanion] for reading and writing purposes.
  */
-class MapRWP <M: BaseLMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, DataType>> (
+class MapRWP <M: LMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, DataType>> (
     private val newMapInstance: () -> MutableMap<KeyType, DataType>,
     private val keyCompanion: RWPCompanion<*, KeyType>,
     private val dataCompanion: RWPCompanion<*, DataType>,
-    lmdbObject: BaseLMDBObject<M>,
+    lmdbObject: LMDBObject<M>,
     nullable: Boolean
 ) : VarSizeRWP<M, MapType>(lmdbObject, nullable) {
     /**

@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import org.lwjgl.system.MemoryUtil
 import java.nio.ByteBuffer
@@ -14,7 +14,7 @@ import kotlin.text.Charsets.UTF_8
  *
  * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  */
-class VarCharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean) : VarSizeRWP<M, String?>(obj, nullable) {
+class VarCharRWP<M: LMDBObject<M>>(obj: LMDBObject<M>, nullable: Boolean) : VarSizeRWP<M, String?>(obj, nullable) {
     override val readFn: (ByteBuffer, Int) -> String? =
         Companion::compReadFn
     override val writeFn: (ByteBuffer, Int, String?) -> Any? =
@@ -23,7 +23,7 @@ class VarCharRWP<M: BaseLMDBObject<M>>(obj: BaseLMDBObject<M>, nullable: Boolean
         Companion::compSizeFn
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T> setValue(thisRef: BaseLMDBObject<M>, property: KProperty<*>, value: T) {
+    override fun <T> setValue(thisRef: LMDBObject<M>, property: KProperty<*>, value: T) {
         val temp = value as String?
         field = temp
     }

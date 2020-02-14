@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BaseLMDBObject
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.getVarLongSize
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.readVarLong
@@ -15,7 +15,7 @@ import java.nio.ByteBuffer
  *
  * Passes [lmdbObject] and [nullable] to the underlying [AbstractRWP].
  */
-abstract class VarSizeRWP<M: BaseLMDBObject<M>, R>(lmdbObject: BaseLMDBObject<M>, nullable: Boolean) :
+abstract class VarSizeRWP<M: LMDBObject<M>, R>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
     AbstractRWP<M, R>(lmdbObject, nullable) {
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
