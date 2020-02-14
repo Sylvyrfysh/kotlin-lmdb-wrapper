@@ -39,8 +39,8 @@ fun Long.getVarLongSize(): Int {
     var idx = 0
     var rem = this
     do {
-        val hasMore = (rem ushr 7) != 0L
         rem = rem ushr 7
+        val hasMore = rem != 0L
         ++idx
     } while (hasMore)
     return idx

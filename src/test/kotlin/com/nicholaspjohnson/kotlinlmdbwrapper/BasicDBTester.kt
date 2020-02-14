@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import kotlin.collections.ArrayList
 
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
@@ -38,7 +37,7 @@ object BasicDBTester {
         env.openDbi(DefaultSetTesterObject)
         env.openDbi(ByteArrayTesterObject)
         env.openDbi(MisalignedShortArray)
-        LMDBBaseObjectProvider.addRWP(UUID::class, UUIDRWP::class)
+        RWPProvider.addRWP(UUID::class, UUIDRWP::class)
         env.openDbi(CustomUUIDRWP)
         env.openDbi(ListTester)
         env.openDbi(MapTester)

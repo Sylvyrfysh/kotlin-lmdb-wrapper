@@ -169,7 +169,7 @@ abstract class BaseLMDBObject<M : BaseLMDBObject<M>>(private val dbi: LMDBDbi<M>
     /**
      * Wrapper for assigning objects based on type and annotation
      */
-    protected val db by lazy { LMDBBaseObjectProvider(this) }
+    protected val db by lazy { RWPProvider(this) }
 
     /**
      * Returns the key size for this object. Defaults to 8, size of a [Long] on a 64-bit platform.

@@ -67,7 +67,7 @@ object NoDBBaseObjectTester {
 
     @Test
     fun `Test isNullable works`() {
-        assertTrue(LMDBBaseObjectProvider.isNullable<Int?>())
-        assertFalse(LMDBBaseObjectProvider.isNullable<Int>())
+        assertTrue(RWPProvider.isNullable<Int?>())
+        assertFalse(RWPProvider.isNullable<Int>())
     }
 }

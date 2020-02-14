@@ -16,7 +16,7 @@ import kotlin.reflect.full.companionObjectInstance
  * Takes in the class instance [obj] to provide for.
  */
 @Suppress("UNCHECKED_CAST")
-class LMDBBaseObjectProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val obj: BaseLMDBObject<M>) {
+class RWPProvider<M: BaseLMDBObject<M>>(@PublishedApi internal val obj: BaseLMDBObject<M>) {
     /**
      * Provides a delegate for the class instance [thisRef]'s property [prop].
      * Returns a RWPInterface with the right getters and setters.
