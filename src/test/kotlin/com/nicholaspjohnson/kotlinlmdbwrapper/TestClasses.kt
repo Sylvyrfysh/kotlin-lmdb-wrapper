@@ -9,8 +9,9 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-class TestObj(data: BufferType): LMDBObject<TestObj>(Companion, data) {
-    constructor(): this(BufferType.None)
+class TestObj(data: BufferType) : LMDBObject<TestObj>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key.toLong())
     }
@@ -18,11 +19,12 @@ class TestObj(data: BufferType): LMDBObject<TestObj>(Companion, data) {
     var key: Int by db
     var data: Int? by db
 
-    companion object: LMDBDbi<TestObj>("test_obj", ::TestObj, NullStoreOption.SPEED, LMDB.MDB_INTEGERKEY)
+    companion object : LMDBDbi<TestObj>(::TestObj, nullStoreOption = NullStoreOption.SPEED, flags = LMDB.MDB_INTEGERKEY)
 }
 
-class MixNormalNulls(data: BufferType): LMDBObject<MixNormalNulls>(Companion, data) {
-    constructor(): this(BufferType.None)
+class MixNormalNulls(data: BufferType) : LMDBObject<MixNormalNulls>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, normInt.toLong())
     }
@@ -32,16 +34,16 @@ class MixNormalNulls(data: BufferType): LMDBObject<MixNormalNulls>(Companion, da
     var aNullableString: String? by db
     var normalString: String by db
 
-    companion object: LMDBDbi<MixNormalNulls>(
-        "mix_normal_nulls",
+    companion object : LMDBDbi<MixNormalNulls>(
         ::MixNormalNulls,
-        NullStoreOption.SIZE,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SIZE,
+        flags = LMDB.MDB_INTEGERKEY
     )
 }
 
-class AllTypesObject(data: BufferType): LMDBObject<AllTypesObject>(Companion, data) {
-    constructor(): this(BufferType.None)
+class AllTypesObject(data: BufferType) : LMDBObject<AllTypesObject>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, long)
     }
@@ -54,40 +56,42 @@ class AllTypesObject(data: BufferType): LMDBObject<AllTypesObject>(Companion, da
     var float: Float by db
     var long: Long by db
     var double: Double by db
+
     @VarLong
     var varlong: Long by db
     var varchar: String by db
     var nullableInt: Int? by db
 
-    companion object: LMDBDbi<AllTypesObject>(
-        "all_types_object",
+    companion object : LMDBDbi<AllTypesObject>(
         ::AllTypesObject,
-        NullStoreOption.SPEED,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SPEED,
+        flags = LMDB.MDB_INTEGERKEY
     )
 }
 
-class MultipleVarLongs(data: BufferType): LMDBObject<MultipleVarLongs>(Companion, data) {
-    constructor(): this(BufferType.None)
+class MultipleVarLongs(data: BufferType) : LMDBObject<MultipleVarLongs>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, first)
     }
 
     @VarLong
     var first: Long by db
+
     @VarLong
     var second: Long by db
 
-    companion object: LMDBDbi<MultipleVarLongs>(
-        "multi_varlongs",
+    companion object : LMDBDbi<MultipleVarLongs>(
         ::MultipleVarLongs,
-        NullStoreOption.SIZE,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SIZE,
+        flags = LMDB.MDB_INTEGERKEY
     )
 }
 
-class MultiWrite(data: BufferType): LMDBObject<MultiWrite>(Companion, data) {
-    constructor(): this(BufferType.None)
+class MultiWrite(data: BufferType) : LMDBObject<MultiWrite>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -95,11 +99,12 @@ class MultiWrite(data: BufferType): LMDBObject<MultiWrite>(Companion, data) {
     var key: Long by db
     var data: Long by db
 
-    companion object: LMDBDbi<MultiWrite>("multi_write", ::MultiWrite, NullStoreOption.SPEED, LMDB.MDB_INTEGERKEY)
+    companion object : LMDBDbi<MultiWrite>(::MultiWrite, nullStoreOption = NullStoreOption.SPEED, flags = LMDB.MDB_INTEGERKEY)
 }
 
-class DefaultSetTesterObject(data: BufferType): LMDBObject<DefaultSetTesterObject>(Companion, data) {
-    constructor(): this(BufferType.None)
+class DefaultSetTesterObject(data: BufferType) : LMDBObject<DefaultSetTesterObject>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -111,18 +116,18 @@ class DefaultSetTesterObject(data: BufferType): LMDBObject<DefaultSetTesterObjec
         set(DefaultSetTesterObject::shouldBeDefault, initialSet)
     }
 
-    companion object: LMDBDbi<DefaultSetTesterObject>(
-        "default_set",
+    companion object : LMDBDbi<DefaultSetTesterObject>(
         ::DefaultSetTesterObject,
-        NullStoreOption.SPEED,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SPEED,
+        flags = LMDB.MDB_INTEGERKEY
     ) {
         const val initialSet = 129834765L
     }
 }
 
-class ByteArrayTesterObject(data: BufferType): LMDBObject<ByteArrayTesterObject>(Companion, data) {
-    constructor(): this(BufferType.None)
+class ByteArrayTesterObject(data: BufferType) : LMDBObject<ByteArrayTesterObject>(Companion, data) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -130,16 +135,17 @@ class ByteArrayTesterObject(data: BufferType): LMDBObject<ByteArrayTesterObject>
     var key: Long by db
     var buffer: ByteArray by db
     var zInt: Int by db
-    companion object: LMDBDbi<ByteArrayTesterObject>(
-        "byte_array_tester",
+
+    companion object : LMDBDbi<ByteArrayTesterObject>(
         ::ByteArrayTesterObject,
-        NullStoreOption.SIZE,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SIZE,
+        flags = LMDB.MDB_INTEGERKEY
     )
 }
 
-class MisalignedShortArray(from: BufferType): LMDBObject<MisalignedShortArray>(Companion, from) {
-    constructor(): this(BufferType.None)
+class MisalignedShortArray(from: BufferType) : LMDBObject<MisalignedShortArray>(Companion, from) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -148,16 +154,16 @@ class MisalignedShortArray(from: BufferType): LMDBObject<MisalignedShortArray>(C
     var single: Byte by db
     var zArray: ShortArray by db
 
-    companion object: LMDBDbi<MisalignedShortArray>(
-        "misaligned_short_array",
+    companion object : LMDBDbi<MisalignedShortArray>(
         ::MisalignedShortArray,
-        NullStoreOption.SIZE,
-        LMDB.MDB_INTEGERKEY
+        nullStoreOption = NullStoreOption.SIZE,
+        flags = LMDB.MDB_INTEGERKEY
     )
 }
 
-class ListTester(from: BufferType): LMDBObject<ListTester>(Companion, from) {
-    constructor(): this(BufferType.None)
+class ListTester(from: BufferType) : LMDBObject<ListTester>(Companion, from) {
+    constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -165,11 +171,12 @@ class ListTester(from: BufferType): LMDBObject<ListTester>(Companion, from) {
     var key: Long by db
     var list: ArrayList<String> by db.collection(ListTester::list) { ArrayList() }
 
-    companion object: LMDBDbi<ListTester>("list_tester", ::ListTester, NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
+    companion object : LMDBDbi<ListTester>(::ListTester, "list_tester", NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
 }
 
-class CustomUUIDRWP(from: BufferType): LMDBObject<CustomUUIDRWP>(Companion, from) {
+class CustomUUIDRWP(from: BufferType) : LMDBObject<CustomUUIDRWP>(Companion, from) {
     constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -177,16 +184,17 @@ class CustomUUIDRWP(from: BufferType): LMDBObject<CustomUUIDRWP>(Companion, from
     var key: Long by db
     var uuid: UUID by db
 
-    companion object: LMDBDbi<CustomUUIDRWP>(
-        "custom_uuid_rwp",
+    companion object : LMDBDbi<CustomUUIDRWP>(
         ::CustomUUIDRWP,
+        "custom_uuid_rwp",
         NullStoreOption.SIZE,
         LMDB.MDB_INTEGERKEY
     )
 }
 
-class MapTester(from: BufferType): LMDBObject<MapTester>(Companion, from) {
+class MapTester(from: BufferType) : LMDBObject<MapTester>(Companion, from) {
     constructor() : this(BufferType.None)
+
     override fun keyFunc(keyBuffer: ByteBuffer) {
         keyBuffer.putLong(0, key)
     }
@@ -194,15 +202,15 @@ class MapTester(from: BufferType): LMDBObject<MapTester>(Companion, from) {
     var key: Long by db
     var map: HashMap<String, Int> by db.map(MapTester::map) { HashMap() }
 
-    companion object: LMDBDbi<MapTester>("map_tester", ::MapTester, NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
+    companion object : LMDBDbi<MapTester>(::MapTester, "map_tester", NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
 }
 
-class NoRWP(from: BufferType): LMDBObject<NoRWP>(Companion, from) {
+class NoRWP(from: BufferType) : LMDBObject<NoRWP>(Companion, from) {
     constructor() : this(BufferType.None)
 
     override fun keyFunc(keyBuffer: ByteBuffer) {}
 
     var none: ByteArrayOutputStream by db // Sufficiently ridiculous to never make serializable
 
-    companion object: LMDBDbi<NoRWP>("no_rwp", ::NoRWP, NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
+    companion object : LMDBDbi<NoRWP>(::NoRWP, "no_rwp", NullStoreOption.SIZE, LMDB.MDB_INTEGERKEY)
 }

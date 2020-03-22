@@ -52,7 +52,8 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
     var committed: Boolean
         private set
     private var firstBuf: ByteBuffer?
-    private var isInit = false
+    protected var isInit = false
+        private set
 
     init {
         when (from) {

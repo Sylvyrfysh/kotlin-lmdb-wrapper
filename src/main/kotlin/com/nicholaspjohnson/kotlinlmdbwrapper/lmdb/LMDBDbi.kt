@@ -1,7 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.BufferType
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDBObject
 import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
@@ -13,10 +13,12 @@ import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty1
+import kotlin.reflect.jvm.javaConstructor
 
 open class LMDBDbi<T : LMDBObject<T>>(
-    val name: String,
     private val constructor: KFunction1<BufferType, T>,
+    val name: String = constructor.javaConstructor?.declaringClass?.simpleName
+        ?: error("Must explicitly specify a class for this DBI!"),
     internal val nullStoreOption: NullStoreOption = NullStoreOption.SPEED,
     private val flags: Int = 0
 ) {
@@ -110,7 +112,12 @@ open class LMDBDbi<T : LMDBObject<T>>(
         }
     }
 
-    private fun cursorLoopKeyRange(lowKeyObject: T, highKeyObject: T, endInclusive: Boolean, block: (ByteBuffer) -> Unit) {
+    private fun cursorLoopKeyRange(
+        lowKeyObject: T,
+        highKeyObject: T,
+        endInclusive: Boolean,
+        block: (ByteBuffer) -> Unit
+    ) {
         val rangeLimit = if (endInclusive) 1 else 0
         cursor { cursor, key, data ->
             MemoryStack.stackPush().use { stack ->
@@ -232,7 +239,11 @@ open class LMDBDbi<T : LMDBObject<T>>(
         val fastChecksList = equalities.filter { it.first in constOffsets }
         val fastChecks = Array(fastChecksList.size) {
             val details = constOffsets.getValue(fastChecksList[it].first)
-            Triple(if (details.second) ::checkKnownFastNullPath else ::checkKnownFastPath, details, fastChecksList[it].second)
+            Triple(
+                if (details.second) ::checkKnownFastNullPath else ::checkKnownFastPath,
+                details,
+                fastChecksList[it].second
+            )
         }
         val slowChecks = equalities.filterNot { it.first in constOffsets }.toTypedArray()
 
@@ -341,7 +352,12 @@ open class LMDBDbi<T : LMDBObject<T>>(
      * If this is called, we have a non-null const-size object.
      * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
      */
-    private fun checkKnownFastPath(companion: RWPCompanion<*, *>, value: Any?, buffer: ByteBuffer, offset: Int): Boolean {
+    private fun checkKnownFastPath(
+        companion: RWPCompanion<*, *>,
+        value: Any?,
+        buffer: ByteBuffer,
+        offset: Int
+    ): Boolean {
         return companion.compReadFn(buffer, offset) == value
     }
 
@@ -349,7 +365,12 @@ open class LMDBDbi<T : LMDBObject<T>>(
      * If this is called, we have a non-null const-size object.
      * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
      */
-    private fun checkEqualityFastPath(companion: RWPCompanion<*, *>, function: (Any?) -> Boolean, buffer: ByteBuffer, offset: Int): Boolean {
+    private fun checkEqualityFastPath(
+        companion: RWPCompanion<*, *>,
+        function: (Any?) -> Boolean,
+        buffer: ByteBuffer,
+        offset: Int
+    ): Boolean {
         return function(companion.compReadFn(buffer, offset))
     }
 
