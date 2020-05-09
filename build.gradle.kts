@@ -5,7 +5,7 @@ import org.jetbrains.dokka.gradle.DokkaTask
 plugins {
     idea
     maven
-    kotlin("jvm") version "1.3.50"
+    kotlin("jvm") version "1.3.72"
     id("org.jetbrains.dokka") version "0.10.1"
 }
 
@@ -45,8 +45,8 @@ dependencies {
     }
 
     //Test Framework
-    testImplementation("org.junit.jupiter", "junit-jupiter-api", "5.5.2")
-    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.5.2")
+    testImplementation("org.junit.jupiter", "junit-jupiter-api", "5.6.2")
+    testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.6.2")
 }
 
 tasks.withType<KotlinCompile> {
