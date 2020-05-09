@@ -8,6 +8,8 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.map.MapRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.varsize.*
 import kotlin.reflect.*
 import kotlin.reflect.full.companionObjectInstance
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.starProjectedType
 
 /**
  * Returns objects for the class of type [M], instance [obj].
@@ -32,9 +34,26 @@ class RWPProvider<M: LMDBObject<M>>(@PublishedApi internal val obj: LMDBObject<M
     internal fun getTypeDelegate(type: KClassifier?, prop: KProperty<*>): RWPInterface<M> {
         val nullable = prop.returnType.isMarkedNullable
         val rwpClass =  getRWPClass(type, prop.annotations)
-        val rwp = rwpClass.constructors.first().call(obj, nullable)
+        val rwp = getRWPConstructor(rwpClass).call(obj, nullable)
         obj.addType(prop as KProperty1<M, *>, rwp)
         return rwp
+    }
+
+    @PublishedApi
+    internal val loadedConstructors = HashMap<KClass<AbstractRWP<M, *>>, KFunction<AbstractRWP<M, *>>>()
+
+    @PublishedApi
+    internal fun getRWPConstructor(klazz: KClass<AbstractRWP<M, *>>): KFunction<AbstractRWP<M, *>> {
+        return loadedConstructors.computeIfAbsent(klazz) {
+            it.constructors.first { constr ->
+                if (constr.parameters.size == 2) {
+                    constr.parameters[0].type.isSubtypeOf(LMDBObject::class.starProjectedType) &&
+                            constr.parameters[1].type.isSubtypeOf(Boolean::class.starProjectedType)
+                } else {
+                    false
+                }
+            }
+        }
     }
 
     /**
