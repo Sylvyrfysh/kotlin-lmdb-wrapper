@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
  * Passes [lmdbObject] and [nullable] to the underlying [VarSizeRWP].
  * Holds [newMapInstance], [keyCompanion], and [dataCompanion] for reading and writing purposes.
  */
-class MapRWP <M: LMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, DataType>> (
+class MapRWP<M: LMDBObject<M>, KeyType, DataType, MapType: Map<KeyType, DataType>> (
     private val newMapInstance: () -> MutableMap<KeyType, DataType>,
     private val keyCompanion: RWPCompanion<*, KeyType>,
     private val dataCompanion: RWPCompanion<*, DataType>,

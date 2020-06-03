@@ -1,9 +1,12 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -20,7 +23,7 @@ object BasicDBTester {
     @BeforeAll
     @JvmStatic
     fun `Set Up`() {
-        assumeTrue(!isCI)
+        assumeTrue(!isCI, "Cannot run in a CI")
 
         if (Files.exists(Paths.get("db"))) {
             Files.list(Paths.get("db")).forEach(Files::delete)
@@ -44,7 +47,7 @@ object BasicDBTester {
 
         testObj1.key = 1
         testObj1.data = 1234
-        testObj1.writeInSingleTX()
+        testObj1.write()
     }
     
     @AfterAll
@@ -52,14 +55,14 @@ object BasicDBTester {
     fun `Tear Down`() {
         assumeTrue(!isCI)
 
-        //LMDB.mdb_env_close(env)
+        env.close()
     }
 
     @Test
     fun `Test Basic Read Write`() {
         val testObj2 = TestObj()
         testObj2.key = 1
-        testObj2.readFromDB()
+        testObj2.read()
         assertEquals(testObj1.data, testObj2.data)
     }
 
@@ -68,7 +71,7 @@ object BasicDBTester {
         val testObj2 = TestObj()
         testObj2.key = Integer.MIN_VALUE
         val except = assertThrows<DataNotFoundException> {
-            testObj2.readFromDB()
+            testObj2.read()
         }
         assertEquals("The key supplied does not have any data in the DB!", except.message)
     }
@@ -80,15 +83,15 @@ object BasicDBTester {
         val testObj2 = TestObj()
         testObj2.key = methodKey
         testObj2.data = firstData
-        testObj2.writeInSingleTX()
+        testObj2.write()
         val testObj3 = TestObj()
         testObj3.key = methodKey
-        testObj3.readFromDB()
+        testObj3.read()
         assertEquals(firstData, testObj3.data)
         testObj2.data = 9012
-        testObj2.writeInSingleTX()
+        testObj2.write()
         assertEquals(firstData, testObj3.data)
-        testObj3.readFromDB()
+        testObj3.read()
         assertEquals(9012, testObj3.data)
     }
 
@@ -98,10 +101,10 @@ object BasicDBTester {
         val testObj2 = TestObj()
         testObj2.key = methodKey
         testObj2.data = null
-        testObj2.writeInSingleTX()
+        testObj2.write()
         val testObj3 = TestObj()
         testObj3.key = methodKey
-        testObj3.readFromDB()
+        testObj3.read()
         assertEquals(null, testObj3.data)
     }
 
@@ -114,11 +117,11 @@ object BasicDBTester {
         mixNormalNulls.aNullableString = "This is a string first."
         mixNormalNulls.normalString = "This is something I guess"
         mixNormalNulls.aNullableString = null
-        mixNormalNulls.writeInSingleTX()
+        mixNormalNulls.write()
 
         val mixNormalNulls2 = MixNormalNulls()
         mixNormalNulls2.normInt = methodKey
-        mixNormalNulls2.readFromDB()
+        mixNormalNulls2.read()
 
         assertEquals(methodKey, mixNormalNulls2.normInt)
         assertNotNull(mixNormalNulls2.nullableInt)
@@ -134,11 +137,11 @@ object BasicDBTester {
         fs1.first = Long.MAX_VALUE
         fs1.second = 2
         fs1.first = methodKey.toLong()
-        fs1.writeInSingleTX()
+        fs1.write()
 
         val fs2 = MultipleVarLongs()
         fs2.first = methodKey.toLong()
-        fs2.readFromDB()
+        fs2.read()
 
         assertEquals(2L, fs2.second)
     }
@@ -172,12 +175,12 @@ object BasicDBTester {
         ato.varchar = varchar
         ato.nullableInt = nullableInt
 
-        ato.writeInSingleTX()
+        ato.write()
 
         val ato2 = AllTypesObject()
         ato2.long = methodKey
 
-        ato2.readFromDB()
+        ato2.read()
 
         assertEquals(bool, ato2.bool)
         assertEquals(byte, ato2.byte)
@@ -237,13 +240,13 @@ object BasicDBTester {
         bbo.zInt = 5
         bbo.key = methodKey
 
-        bbo.writeInSingleTX()
+        bbo.write()
 
         val bbo2 = ByteArrayTesterObject()
         bbo2.key = methodKey
         assertNull(bbo2.buffer)
 
-        bbo2.readFromDB()
+        bbo2.read()
 
         assertArrayEquals(testArr, bbo2.buffer)
     }
@@ -258,11 +261,11 @@ object BasicDBTester {
         writeObj.single = 25.toByte()
         writeObj.zArray = expectArray
 
-        writeObj.writeInSingleTX()
+        writeObj.write()
 
         val readObj = MisalignedShortArray()
         readObj.key = methodKey
-        readObj.readFromDB()
+        readObj.read()
 
         assertArrayEquals(expectArray, readObj.zArray)
     }
@@ -276,11 +279,11 @@ object BasicDBTester {
         listObj.key = methodKey
         listObj.list = expectList
 
-        listObj.writeInSingleTX()
+        listObj.write()
 
         val listObj2 = ListTester()
         listObj2.key = methodKey
-        listObj2.readFromDB()
+        listObj2.read()
 
         assertLinesMatch(expectList, listObj2.list)
     }
@@ -293,11 +296,11 @@ object BasicDBTester {
         val customRWPObject = CustomUUIDRWP()
         customRWPObject.key = methodKey
         customRWPObject.uuid = expectUUID
-        customRWPObject.writeInSingleTX()
+        customRWPObject.write()
 
         val cObj2 = CustomUUIDRWP()
         cObj2.key = methodKey
-        cObj2.readFromDB()
+        cObj2.read()
 
         assertEquals(expectUUID, cObj2.uuid)
     }
@@ -316,11 +319,11 @@ object BasicDBTester {
         testObj.key = methodKey
         testObj.map = expectMap
 
-        testObj.writeInSingleTX()
+        testObj.write()
 
         val mapObj2 = MapTester()
         mapObj2.key = methodKey
-        mapObj2.readFromDB()
+        mapObj2.read()
 
         assertEquals(expectMap, mapObj2.map)
     }
@@ -335,17 +338,17 @@ object BasicDBTester {
         m1.key = key1
         m1.single = 56.toByte()
         m1.zArray = ShortArray(1)
-        m1.writeInSingleTX()
+        m1.write()
         val m2 = MisalignedShortArray()
         m2.key = key2
         m2.single = 57.toByte()
         m2.zArray = ShortArray(2)
-        m2.writeInSingleTX()
+        m2.write()
         val m3 = MisalignedShortArray()
         m3.key = key3
         m3.single = 58.toByte()
         m3.zArray = ShortArray(3)
-        m3.writeInSingleTX()
+        m3.write()
 
         val expectM2 = MisalignedShortArray.getElementsWithEquality(MisalignedShortArray::single, 57.toByte())
         assertNotNull(expectM2.firstOrNull())
@@ -363,11 +366,11 @@ object BasicDBTester {
         val l1 = ListTester()
         l1.key = key1
         l1.list = arrayListOf("Strings!", "Cause why not!", eqCheck)
-        l1.writeInSingleTX()
+        l1.write()
         val l2 = ListTester()
         l2.key = key2
         l2.list = arrayListOf("Strings Extra!", "Cause why not though!", "Another for good measure!")
-        l2.writeInSingleTX()
+        l2.write()
 
         val obj = ListTester.getElementsWithEqualityFunction(ListTester::list) { it.contains(eqCheck) }.firstOrNull()
         assertNotNull(obj)
@@ -386,8 +389,8 @@ object BasicDBTester {
 
         val obj1 = TestObj()
         obj1.key = key1
-        obj1.data = 12345
-        obj1.writeInSingleTX()
+        obj1.data = dataItem
+        obj1.write()
 
         assertEquals(1, TestObj.getElementsWithEquality(TestObj::data, dataItem).size)
 

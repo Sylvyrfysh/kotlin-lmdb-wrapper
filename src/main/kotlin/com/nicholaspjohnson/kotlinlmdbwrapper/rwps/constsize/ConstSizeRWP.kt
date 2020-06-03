@@ -6,14 +6,14 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import java.nio.ByteBuffer
 
 /**
- * A constant sized item of type [R] contained in class [M].
+ * A constant sized item of type [ItemType] contained in class [M].
  *
  * @constructor
  *
  * Passes [lmdbObject] and [nullable] to the underlying [AbstractRWP].
  */
-abstract class ConstSizeRWP<M: LMDBObject<M>, R>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
-    AbstractRWP<M, R>(lmdbObject, nullable) {
+abstract class ConstSizeRWP<M: LMDBObject<M>, ItemType>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
+    AbstractRWP<M, ItemType>(lmdbObject, nullable) {
     /**
      * The constant size of this item.
      */
@@ -21,13 +21,13 @@ abstract class ConstSizeRWP<M: LMDBObject<M>, R>(lmdbObject: LMDBObject<M>, null
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
      */
-    protected abstract val readFn: (ByteBuffer, Int) -> R
+    protected abstract val readFn: (ByteBuffer, Int) -> ItemType
     /**
      * A function that takes the write buffer and offset and writes the given value at that point.
      */
-    protected abstract val writeFn: (ByteBuffer, Int, R) -> Any?
+    protected abstract val writeFn: (ByteBuffer, Int, ItemType) -> Any?
 
-    override val getSize: (R) -> Int = { itemSize }
+    override val getSize: (ItemType) -> Int = { itemSize }
 
     override fun writeToDB(
         writeBuffer: ByteBuffer,

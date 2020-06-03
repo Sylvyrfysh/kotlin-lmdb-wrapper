@@ -15,14 +15,14 @@ import kotlin.reflect.KFunction1
 import kotlin.reflect.KProperty1
 import kotlin.reflect.jvm.javaConstructor
 
-open class LMDBDbi<T : LMDBObject<T>>(
-    private val constructor: KFunction1<BufferType, T>,
+open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
+    private val constructor: KFunction1<BufferType, DbiType>,
     val name: String = constructor.javaConstructor?.declaringClass?.simpleName
-        ?: error("Must explicitly specify a class for this DBI!"),
+        ?: error("Must explicitly specify a name for this DBI!"),
     internal val nullStoreOption: NullStoreOption = NullStoreOption.SPEED,
     private val flags: Int = 0
 ) {
-    private lateinit var constOffsets: Map<KProperty1<T, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>
+    private lateinit var constOffsets: Map<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>
 
     internal lateinit var nameToIndices: Map<String, Int> //Name to index of position
     internal lateinit var nullables: Array<Boolean>
@@ -113,8 +113,8 @@ open class LMDBDbi<T : LMDBObject<T>>(
     }
 
     private fun cursorLoopKeyRange(
-        lowKeyObject: T,
-        highKeyObject: T,
+        lowKeyObject: DbiType,
+        highKeyObject: DbiType,
         endInclusive: Boolean,
         block: (ByteBuffer) -> Unit
     ) {
@@ -161,27 +161,27 @@ open class LMDBDbi<T : LMDBObject<T>>(
         }
     }
 
-    fun forEach(block: (T) -> Unit) {
+    fun forEach(block: (DbiType) -> Unit) {
         cursorLoopFull {
             block(constructor(BufferType.DBRead(it)))
         }
     }
 
-    fun getEach(): List<T> {
-        val ret = ArrayList<T>()
+    fun getEach(): List<DbiType> {
+        val ret = ArrayList<DbiType>()
         cursorLoopFull {
             ret += constructor(BufferType.DBRead(it))
         }
         return ret
     }
 
-    fun <M> getElementsWithEquality(toCheck: Pair<KProperty1<T, M>, M>): List<T> =
+    fun <M> getElementsWithEquality(toCheck: Pair<KProperty1<DbiType, M>, M>): List<DbiType> =
         getElementsWithEquality(toCheck.first, toCheck.second)
 
-    fun <M> getElementsWithEquality(prop: KProperty1<T, M>, value: M): List<T> {
+    fun <M> getElementsWithEquality(prop: KProperty1<DbiType, M>, value: M): List<DbiType> {
         require(isInit)
         val (offset, nullable, companion) = constOffsets[prop] ?: Triple(0, false, null)
-        val ret = ArrayList<T>()
+        val ret = ArrayList<DbiType>()
 
         val fastPath: Boolean = prop in constOffsets
         val fastMethod = if (nullable) {
@@ -208,10 +208,13 @@ open class LMDBDbi<T : LMDBObject<T>>(
         return ret
     }
 
-    fun <M> getElementsWithEqualityFunction(prop: KProperty1<T, M>, equalityFunction: (M) -> Boolean): List<T> {
+    fun <M> getElementsWithEqualityFunction(
+        prop: KProperty1<DbiType, M>,
+        equalityFunction: (M) -> Boolean
+    ): List<DbiType> {
         require(isInit)
         val (offset, _, companion) = constOffsets[prop] ?: Triple(0, false, null)
-        val ret = ArrayList<T>()
+        val ret = ArrayList<DbiType>()
 
         val fastPath: Boolean = prop in constOffsets
 
@@ -235,7 +238,7 @@ open class LMDBDbi<T : LMDBObject<T>>(
         return ret
     }
 
-    fun getElementsWithEquality(vararg equalities: Pair<KProperty1<T, *>, Any?>): List<T> {
+    fun getElementsWithEquality(vararg equalities: Pair<KProperty1<DbiType, *>, Any?>): List<DbiType> {
         val fastChecksList = equalities.filter { it.first in constOffsets }
         val fastChecks = Array(fastChecksList.size) {
             val details = constOffsets.getValue(fastChecksList[it].first)
@@ -247,7 +250,7 @@ open class LMDBDbi<T : LMDBObject<T>>(
         }
         val slowChecks = equalities.filterNot { it.first in constOffsets }.toTypedArray()
 
-        val ret = ArrayList<T>()
+        val ret = ArrayList<DbiType>()
 
         cursorLoopFull { buffer ->
             var cont = true
@@ -271,8 +274,12 @@ open class LMDBDbi<T : LMDBObject<T>>(
         return ret
     }
 
-    fun getElementsByKeyRange(lowKeyObject: T, highKeyObject: T, endInclusive: Boolean = false): List<T> {
-        val ret = ArrayList<T>()
+    fun getElementsByKeyRange(
+        lowKeyObject: DbiType,
+        highKeyObject: DbiType,
+        endInclusive: Boolean = false
+    ): List<DbiType> {
+        val ret = ArrayList<DbiType>()
         cursorLoopKeyRange(lowKeyObject, highKeyObject, endInclusive) {
             ret += constructor(BufferType.DBRead(it))
         }
@@ -282,17 +289,17 @@ open class LMDBDbi<T : LMDBObject<T>>(
     /**
      * Overload for [writeMultiple] with and [array].
      */
-    fun writeMultiple(array: Array<T>) = writeMultiple(array.iterator())
+    fun writeMultiple(array: Array<DbiType>) = writeMultiple(array.iterator())
 
     /**
      * Overload for [writeMultiple] with an [iterable].
      */
-    fun writeMultiple(iterable: Iterable<T>) = writeMultiple(iterable.iterator())
+    fun writeMultiple(iterable: Iterable<DbiType>) = writeMultiple(iterable.iterator())
 
     /**
      * Takes an [iterator], then iterates over it and writes each item to the database.
      */
-    fun writeMultiple(iterator: Iterator<T>) {
+    fun writeMultiple(iterator: Iterator<DbiType>) {
         if (!iterator.hasNext()) {
             return
         }
@@ -315,25 +322,29 @@ open class LMDBDbi<T : LMDBObject<T>>(
     }
 
     /**
-     * If this is called, [prop] is a non-const size property.
-     * This means that we need to load the whole object to make sure we have the correct offsets.
+     * If this is called, [prop] is a non-const size property. This means that we need to load the whole object to
+     * make sure we have the correct offsets.
      */
-    private fun checkKnownSlowPath(prop: KProperty1<T, *>, value: Any?, item: T): Boolean {
+    private fun checkKnownSlowPath(prop: KProperty1<DbiType, *>, value: Any?, item: DbiType): Boolean {
         return prop.get(item) == value
     }
 
     /**
-     * If this is called, [prop] is a non-const size property.
-     * This means that we need to load the whole object to make sure we have the correct offsets.
+     * If this is called, [prop] is a non-const size property. This means that we need to load the whole object to make
+     * sure we have the correct offsets.
      */
-    private fun checkEqualitySlowPath(prop: KProperty1<T, *>, function: (Any?) -> Boolean, item: T): Boolean {
+    private fun checkEqualitySlowPath(
+        prop: KProperty1<DbiType, *>,
+        function: (Any?) -> Boolean,
+        item: DbiType
+    ): Boolean {
         return function(prop.get(item))
     }
 
     /**
-     * If this is called, we have a speed-optimized database with a potentially null item.
-     * We first do a null check, since if both are null we can return true.
-     * Otherwise, if we didn't read a null, we check the fast path at an offset of 1.
+     * If this is called, we have a speed-optimized database with a potentially null item. We first do a null check,
+     * since if both are null we can return true. Otherwise, if we didn't read a null, we check the fast path at an
+     * offset of 1.
      */
     private fun checkKnownFastNullPath(
         companion: RWPCompanion<*, *>,
@@ -349,8 +360,8 @@ open class LMDBDbi<T : LMDBObject<T>>(
     }
 
     /**
-     * If this is called, we have a non-null const-size object.
-     * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
+     * If this is called, we have a non-null const-size object. We can always read these from the same position,
+     * therefore we avoid a object creation until we have checked if this is a match.
      */
     private fun checkKnownFastPath(
         companion: RWPCompanion<*, *>,
@@ -362,8 +373,8 @@ open class LMDBDbi<T : LMDBObject<T>>(
     }
 
     /**
-     * If this is called, we have a non-null const-size object.
-     * We can always read these from the same position, therefore we avoid a object creation until we have checked if this is a match.
+     * If this is called, we have a non-null const-size object. We can always read these from the same position,
+     * therefore we avoid an object creation until we have checked if this is a match.
      */
     private fun checkEqualityFastPath(
         companion: RWPCompanion<*, *>,

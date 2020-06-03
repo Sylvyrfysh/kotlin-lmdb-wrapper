@@ -9,28 +9,30 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.writeVarLong
 import java.nio.ByteBuffer
 
 /**
- * A variably sized item of type [R] contained in class [M].
+ * A variably sized item of type [ItemType] contained in class [M].
  *
  * @constructor
  *
  * Passes [lmdbObject] and [nullable] to the underlying [AbstractRWP].
  */
-abstract class VarSizeRWP<M: LMDBObject<M>, R>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
-    AbstractRWP<M, R>(lmdbObject, nullable) {
+abstract class VarSizeRWP<M : LMDBObject<M>, ItemType>(lmdbObject: LMDBObject<M>, nullable: Boolean) :
+    AbstractRWP<M, ItemType>(lmdbObject, nullable) {
     /**
      * A function that takes the read buffer and offset and returns the value at that point.
      */
-    protected abstract val readFn: (ByteBuffer, Int) -> R
+    protected abstract val readFn: (ByteBuffer, Int) -> ItemType
+
     /**
      * A function that takes the write buffer and offset and writes the given value at that point.
      */
-    protected abstract val writeFn: (ByteBuffer, Int, R) -> Any?
+    protected abstract val writeFn: (ByteBuffer, Int, ItemType) -> Any?
+
     /**
      * A function that returns the size of the object when ready to be written on disk.
      */
-    protected abstract val getItemOnlySize: (R) -> Int
+    protected abstract val getItemOnlySize: (ItemType) -> Int
 
-    override val getSize: (R) -> Int = { value ->
+    override val getSize: (ItemType) -> Int = { value ->
         val sz = getItemOnlySize(value!!)
         sz + sz.toLong().getVarLongSize()
     }

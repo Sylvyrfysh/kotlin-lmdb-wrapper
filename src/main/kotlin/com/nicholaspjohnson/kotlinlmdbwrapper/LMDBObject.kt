@@ -5,15 +5,12 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.NullStoreOption
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.AbstractRWP
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.RWPCompanion
 import com.nicholaspjohnson.kotlinlmdbwrapper.rwps.constsize.ConstSizeRWP
-import org.lwjgl.system.MemoryStack.stackPush
-import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB.*
 import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
 import kotlin.Comparator
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.companionObjectInstance
@@ -121,10 +118,7 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
 
     private fun setTypes() {
         require(rwpsMap.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
-        val rwpOrderedIter = rwpsMap.entries.iterator()
-        this.rwpsOrdered = Array(rwpsMap.size) {
-            rwpOrderedIter.next().value
-        }
+        this.rwpsOrdered = rwpsMap.values.toTypedArray()
         if (committed && firstBuf == null) {
             this.nullables = Array(propMap!!.size) { false }
             val tNameMap = HashMap<String, Int>()
@@ -193,12 +187,12 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
      * Writes only this object into the [dbi] of [env].
      * The key will be the return of [keyFunc].
      */
-    fun writeInSingleTX() {
+    fun write() {
         if (!isInit) {
             setUsed()
         }
         require(dbi.handle != -1) { "DBI must be initialized to store objects!" }
-        stackPush().use { stack ->
+        dbi.env.getOrCreateWriteTx { stack, tx ->
             val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
@@ -206,19 +200,11 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
 
             val dv = MDBVal.callocStack(stack).mv_size(size.toLong())
 
-            val pp = stack.mallocPointer(1)
-
-            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, 0, pp))
-            val txn = pp.get(0)
-
             try {
-                LMDB_CHECK(mdb_put(txn, dbi.handle, kv, dv, MDB_RESERVE))
+                LMDB_CHECK(mdb_put(tx.tx, dbi.handle, kv, dv, MDB_RESERVE))
 
                 writeToBuffer(dv.mv_data()!!)
-
-                LMDB_CHECK(mdb_txn_commit(txn))
             } catch (t: Throwable) {
-                mdb_txn_abort(txn)
                 throw t
             }
 
@@ -231,37 +217,30 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
      * If the key does not exist, a [DataNotFoundException] will be thrown.
      */
     @Throws(DataNotFoundException::class)
-    fun readFromDB() {
+    fun read() {
         if (!isInit) {
             setUsed()
         }
         require(dbi.handle != -1) { "DBI must be initialized to read objects!" }
-        stackPush().use { stack ->
+        dbi.env.getOrCreateReadTx { stack, readTx ->
             val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
-            val pp = stack.mallocPointer(1)
-            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, MDB_RDONLY, pp))
-            val txn = pp.get(0)
-
             val dv = MDBVal.callocStack()
-            val err = mdb_get(txn, dbi.handle, kv, dv)
+            val err = mdb_get(readTx.tx, dbi.handle, kv, dv)
             if (err == MDB_NOTFOUND) {
-                mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
             } else {
                 try {
                     LMDB_CHECK(err)
                 } catch (t: Throwable) {
-                    mdb_txn_abort(txn)
                     throw t
                 }
             }
 
             initBuffers(dv.mv_data()!!)
-            mdb_txn_abort(txn)
         }
     }
 
@@ -274,18 +253,14 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
             setUsed()
         }
         require(dbi.handle != -1) { "DBI must be initialized to delete objects!" }
-        stackPush().use { stack ->
+        dbi.env.getOrCreateWriteTx { stack, tx ->
             val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
-            val pp = stack.mallocPointer(1)
-            LMDB_CHECK(mdb_txn_begin(dbi.env.handle, MemoryUtil.NULL, 0, pp))
-            val txn = pp.get(0)
-
             val flags = stack.mallocInt(1)
-            LMDB_CHECK(mdb_dbi_flags(txn, dbi.handle, flags))
+            LMDB_CHECK(mdb_dbi_flags(tx.tx, dbi.handle, flags))
 
             val data = if ((flags.get(0) and MDB_DUPSORT) == MDB_DUPSORT) {
                 val dv = MDBVal.callocStack(stack).mv_data(stack.malloc(size))
@@ -299,17 +274,13 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
                 null
             }
 
-            val err = mdb_del(txn, dbi.handle, kv, data)
+            val err = mdb_del(tx.tx, dbi.handle, kv, data)
             if (err == MDB_NOTFOUND) {
-                mdb_txn_abort(txn)
                 throw DataNotFoundException("The key supplied does not have any data in the DB!")
             } else {
                 try {
                     LMDB_CHECK(err)
-
-                    LMDB_CHECK(mdb_txn_commit(txn))
                 } catch (t: Throwable) {
-                    mdb_txn_abort(txn)
                     throw t
                 }
             }
@@ -329,143 +300,6 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
                 }
                 o1.third -> -1
                 else -> 1
-            }
-        }
-
-        /**
-         * Returns true if any item in the [dbi] of [env] has a value of [item] for [property].
-         */
-        inline fun <reified M : LMDBObject<M>, T> hasObjectWithValue(
-            env: Long,
-            dbi: Int,
-            property: KProperty1<M, T>,
-            item: T
-        ): Boolean = getObjectsWithValue(env, dbi, property, item).isNotEmpty()
-
-        /**
-         * Returns all items in the [dbi] of [env] with a value of [item] for [property]. If none match, an empty list is returned.
-         */
-        inline fun <reified M : LMDBObject<M>, T> getObjectsWithValue(
-            env: Long,
-            dbi: Int,
-            property: KProperty1<M, T>,
-            item: T
-        ): List<M> {
-            val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
-
-            val ret = ArrayList<M>()
-            stackPush().use { stack ->
-                val pp = stack.mallocPointer(1)
-
-                LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
-                val txn = pp.get(0)
-
-                LMDB_CHECK(mdb_cursor_open(txn, dbi, pp.position(0)))
-                val cursor = pp.get(0)
-
-                val data = MDBVal.mallocStack(stack)
-                val key = MDBVal.mallocStack(stack)
-
-                var rc = mdb_cursor_get(cursor, key, data, MDB_FIRST)
-
-                while (rc != MDB_NOTFOUND) {
-                    LMDB_CHECK(rc)
-                    val obj = const.call(BufferType.DBRead(data.mv_data()!!))
-                    if (property.get(obj)?.equals(item) == true) {
-                        ret.add(obj)
-                    }
-                    rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
-                }
-
-                mdb_cursor_close(cursor)
-                mdb_txn_abort(txn)
-                return ret
-            }
-        }
-
-        /**
-         * Returns true if any item in the [dbi] of [env] has a value of [item] for [property] with the equality function [equalityFunc].
-         */
-        inline fun <reified M : LMDBObject<M>, T, R> hasObjectWithEquality(
-            env: Long,
-            dbi: Int,
-            property: KProperty1<M, T>,
-            item: R,
-            equalityFunc: (T, R) -> Boolean
-        ): Boolean = getObjectsWithEquality(env, dbi, property, item, equalityFunc).isNotEmpty()
-
-        /**
-         * Returns all items in the [dbi] of [env] with a value of [item] for [property] with [equalityFunc]. If none match, an empty list is returned.
-         */
-        inline fun <reified M : LMDBObject<M>, T, R> getObjectsWithEquality(
-            env: Long,
-            dbi: Int,
-            property: KProperty1<M, T>,
-            item: R,
-            equalityFunc: (T, R) -> Boolean
-        ): List<M> {
-            val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
-
-            val ret = ArrayList<M>()
-            stackPush().use { stack ->
-                val pp = stack.mallocPointer(1)
-
-                LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
-                val txn = pp.get(0)
-
-                LMDB_CHECK(mdb_cursor_open(txn, dbi, pp.position(0)))
-                val cursor = pp.get(0)
-
-                val data = MDBVal.mallocStack(stack)
-                val key = MDBVal.mallocStack(stack)
-
-                var rc = mdb_cursor_get(cursor, key, data, MDB_FIRST)
-
-                while (rc != MDB_NOTFOUND) {
-                    LMDB_CHECK(rc)
-                    val obj = const.call(BufferType.DBRead(data.mv_data()!!))
-                    if (equalityFunc(property.get(obj)!!, item)) {
-                        ret.add(obj)
-                    }
-                    rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
-                }
-
-                mdb_cursor_close(cursor)
-                mdb_txn_abort(txn)
-                return ret
-            }
-        }
-
-        /**
-         * Iterates over the [dbi] of [env] and passes all items to [block].
-         */
-        inline fun <reified M : LMDBObject<M>> forEach(env: Long, dbi: Int, block: (M) -> Unit) {
-            val const =
-                M::class.constructors.first { it.parameters.size == 1 && it.parameters.first().type.classifier == BufferType::class }
-            stackPush().use { stack ->
-                val pp = stack.mallocPointer(1)
-
-                LMDB_CHECK(mdb_txn_begin(env, MemoryUtil.NULL, MDB_RDONLY, pp))
-                val txn = pp.get(0)
-
-                LMDB_CHECK(mdb_cursor_open(txn, dbi, pp.position(0)))
-                val cursor = pp.get(0)
-
-                val data = MDBVal.mallocStack(stack)
-                val key = MDBVal.mallocStack(stack)
-
-                var rc = mdb_cursor_get(cursor, key, data, MDB_FIRST)
-
-                while (rc != MDB_NOTFOUND) {
-                    LMDB_CHECK(rc)
-                    block(const.call(BufferType.DBRead(data.mv_data()!!)))
-                    rc = mdb_cursor_get(cursor, key, data, MDB_NEXT)
-                }
-
-                mdb_cursor_close(cursor)
-                mdb_txn_abort(txn)
             }
         }
     }
