@@ -34,7 +34,7 @@ coming soon...
 | Map RWP                    | &#x2714; |          |
 | Type-Wrapped RWP           | &#x2714; |          |
 | Class Version Migration    |          | &#x274c; |
-| ThreadLocal R/W TXes       |          | &#x274c; |
-| Map/List constructor call  |          | &#x274c; |
+| ThreadLocal R/W TXes       |          | &#x2714; |
+| Map/List constructor call  |          | &#x2714; |
 | Default keys               |          | &#x274c; |
-| Class is a DBI             |          | &#x274c; |
+| Class is a DBI             |          | &#x2714; |
