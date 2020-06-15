@@ -105,13 +105,14 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDb
     }
 
     /**
-     * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
+     * Adds the [property] that is backed by [rwp].
      */
-    fun addType(prop: KProperty1<DbiType, *>, rwp: AbstractRWP<DbiType, *>) {
+    @PublishedApi
+    internal fun addType(property: KProperty1<DbiType, *>, rwp: AbstractRWP<DbiType, *>) {
         require(!isInit) { "Cannot add new DB items after first access!" }
-        val key = Triple(prop.name, prop.returnType.isMarkedNullable, rwp is ConstSizeRWP<*, *>)
+        val key = Triple(property.name, property.returnType.isMarkedNullable, rwp is ConstSizeRWP<*, *>)
         require(!(propMap?.containsKey(key) ?: false)) { "Cannot have the same name twice!" }
-        propMap?.set(key, prop)
+        propMap?.set(key, property)
         rwpsMap[key] = rwp
     }
 
