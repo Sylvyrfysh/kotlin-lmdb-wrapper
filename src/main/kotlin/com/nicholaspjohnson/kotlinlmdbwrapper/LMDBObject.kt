@@ -17,21 +17,20 @@ import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.jvm.isAccessible
 
 /**
- * A basic LMDBObject that is of the class [M] which extends [LMDBObject].
+ * A basic LMDBObject that is of the class [DbiType] which extends [LMDBObject].
  *
  * @constructor
  * Initialize the buffers and update the offsets
  *
  * @param[from] The way to create this object
  */
-abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: BufferType) {
-    private val propMap: TreeMap<Triple<String, Boolean, Boolean>, KProperty1<M, *>>? = if (from == BufferType.DbiObject) TreeMap(pairComparator) else null
-    private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<M, *>>(pairComparator)
+abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDbi<DbiType>, from: BufferType) {
+    private val propMap: TreeMap<Triple<String, Boolean, Boolean>, KProperty1<DbiType, *>>? = if (from == BufferType.DbiObject) TreeMap(pairComparator) else null
+    private val rwpsMap = TreeMap<Triple<String, Boolean, Boolean>, AbstractRWP<DbiType, *>>(pairComparator)
 
-    internal lateinit var nameToIndices: Map<String, Int> //Name to index of position
-    internal lateinit var constSizeMap: Map<KProperty1<M, *>, Triple<Int, Boolean, RWPCompanion<*, *>>> //Name of const size items to their positions
+    internal lateinit var constSizeMap: Map<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>> //Name of const size items to their positions
 
-    private lateinit var rwpsOrdered: Array<AbstractRWP<M, *>>
+    private lateinit var rwpsOrdered: Array<AbstractRWP<DbiType, *>>
     internal lateinit var nullables: Array<Boolean>
 
     /**
@@ -40,7 +39,7 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
     val size: Int
         get() {
             setUsed()
-            return rwpsOrdered.map{ it.getDiskSize(dbi.nullStoreOption) }.sum()
+            return rwpsOrdered.map { it.getDiskSize(dbi.nullStoreOption) }.sum()
         }
 
     /**
@@ -108,7 +107,7 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
     /**
      * Adds an object to this object with the name [name] that is [nullable], backed by [rwp].
      */
-    fun addType(prop: KProperty1<M, *>, rwp: AbstractRWP<M, *>) {
+    fun addType(prop: KProperty1<DbiType, *>, rwp: AbstractRWP<DbiType, *>) {
         require(!isInit) { "Cannot add new DB items after first access!" }
         val key = Triple(prop.name, prop.returnType.isMarkedNullable, rwp is ConstSizeRWP<*, *>)
         require(!(propMap?.containsKey(key) ?: false)) { "Cannot have the same name twice!" }
@@ -124,11 +123,12 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
             val tNameMap = HashMap<String, Int>()
             val tempIter = rwpsMap.iterator()
             var offset = 0
-            val writeMap = HashMap<KProperty1<M, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>()
+            val writeMap = HashMap<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>()
             propMap.entries.forEachIndexed { index, s ->
                 nullables[index] = s.value.returnType.isMarkedNullable
                 tNameMap[s.key.first] = index
-                if (s.key.third /*const size*/ && (!s.key.second /*not-null*/ || (s.key.second && dbi.nullStoreOption == NullStoreOption.SPEED) /*nullable and speed option*/)) {
+                if (s.key.third /*const size*/ &&
+                    (!s.key.second /*not-null*/ || (s.key.second && dbi.nullStoreOption == NullStoreOption.SPEED) /*nullable and speed option*/)) {
                     val tin = tempIter.next()
                     if (tin.value::class.companionObjectInstance is RWPCompanion<*, *>) {
                         writeMap[s.value] =
@@ -142,9 +142,7 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
                 }
             }
             constSizeMap = Collections.unmodifiableMap(writeMap)
-            this.nameToIndices = tNameMap
         } else {
-            this.nameToIndices = dbi.nameToIndices
             this.nullables = dbi.nullables
         }
     }
@@ -152,12 +150,12 @@ abstract class LMDBObject<M : LMDBObject<M>>(private val dbi: LMDBDbi<M>, from: 
     /**
      * Initialize the value of the object backed by [kProperty] to [item].
      */
-    protected fun <T> set(kProperty: KProperty1<M, T>, item: T) {
+    protected fun <T> set(kProperty: KProperty1<DbiType, T>, item: T) {
         require(!isInit) { "Do not allow changing of items after initialization!" }
         val oldAccessible = kProperty.isAccessible
         kProperty.isAccessible = true
         @Suppress("UNCHECKED_CAST")
-        (kProperty.getDelegate(this as M) as AbstractRWP<M, T>).setValue(this, kProperty, item)
+        (kProperty.getDelegate(this as DbiType) as AbstractRWP<DbiType, T>).setValue(this, kProperty, item)
         kProperty.isAccessible = oldAccessible
     }
 

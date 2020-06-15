@@ -24,7 +24,6 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
 ) {
     private lateinit var constOffsets: Map<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>
 
-    internal lateinit var nameToIndices: Map<String, Int> //Name to index of position
     internal lateinit var nullables: Array<Boolean>
 
     internal var handle: Int = -1
@@ -51,7 +50,6 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
         val obj = constructor(BufferType.DbiObject)
         obj.setUsed()
         constOffsets = obj.constSizeMap
-        nameToIndices = obj.nameToIndices
         nullables = obj.nullables
 
         isInit = true
@@ -89,26 +87,23 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
     open fun postClose() {}
 
     private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
-        MemoryStack.stackPush().use { stack ->
+        fun exec(stack: MemoryStack, tx: LMDBTransaction) {
             val pp = stack.mallocPointer(1)
 
-            LMDB_CHECK(LMDB.mdb_txn_begin(env.handle, MemoryUtil.NULL, if (readOnly) LMDB.MDB_RDONLY else 0, pp))
-            val txn = pp.get(0)
-
-            LMDB_CHECK(LMDB.mdb_cursor_open(txn, handle, pp.position(0)))
+            LMDB_CHECK(LMDB.mdb_cursor_open(tx.tx, handle, pp.position(0)))
             val cursor = pp.get(0)
-
             val key = MDBVal.mallocStack(stack)
             val data = MDBVal.mallocStack(stack)
 
             block(cursor, key, data)
 
             LMDB.mdb_cursor_close(cursor)
-            if (readOnly) {
-                LMDB.mdb_txn_abort(txn)
-            } else {
-                LMDB_CHECK(LMDB.mdb_txn_commit(txn))
-            }
+        }
+
+        if (readOnly) {
+            env.getOrCreateReadTx(::exec)
+        } else {
+            env.getOrCreateWriteTx(::exec)
         }
     }
 
@@ -289,7 +284,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
     /**
      * Overload for [writeMultiple] with and [array].
      */
-    fun writeMultiple(array: Array<DbiType>) = writeMultiple(array.iterator())
+    fun writeMultiple(array: Array<out DbiType>) = writeMultiple(array.iterator())
 
     /**
      * Overload for [writeMultiple] with an [iterable].
@@ -308,10 +303,11 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
                 key.mv_data(stack.malloc(0))
                 for (item in iterator) {
                     val itemKeySize = item.keySize()
-                    if (itemKeySize.toLong() != key.mv_size()) {
+                    if (itemKeySize.toLong() > key.mv_size()) {
                         key.mv_data(stack.malloc(itemKeySize))
                     }
                     item.keyFunc(key.mv_data()!!)
+                    key.mv_data()!!.limit(itemKeySize)
                     data.mv_size(item.size.toLong())
                     LMDB_CHECK(LMDB.mdb_cursor_put(cursor, key, data, LMDB.MDB_RESERVE))
 
