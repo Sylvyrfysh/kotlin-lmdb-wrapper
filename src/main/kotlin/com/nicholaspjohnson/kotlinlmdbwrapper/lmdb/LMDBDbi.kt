@@ -306,8 +306,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
                     if (itemKeySize.toLong() > key.mv_size()) {
                         key.mv_data(stack.malloc(itemKeySize))
                     }
-                    item.keyFunc(key.mv_data()!!)
                     key.mv_data()!!.limit(itemKeySize)
+                    item.keyFunc(key.mv_data()!!)
                     data.mv_size(item.size.toLong())
                     LMDB_CHECK(LMDB.mdb_cursor_put(cursor, key, data, LMDB.MDB_RESERVE))
 
