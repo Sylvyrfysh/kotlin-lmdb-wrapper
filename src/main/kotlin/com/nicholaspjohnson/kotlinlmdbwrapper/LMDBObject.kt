@@ -31,7 +31,7 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDb
     internal lateinit var constSizeMap: Map<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>> //Name of const size items to their positions
 
     private lateinit var rwpsOrdered: Array<AbstractRWP<DbiType, *>>
-    internal lateinit var nullables: Array<Boolean>
+    internal lateinit var nullables: BooleanArray
 
     /**
      * Returns the size of this object in-DB
@@ -120,7 +120,7 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDb
         require(rwpsMap.isNotEmpty()) { "At least one type is required for an LMDBObject!" }
         this.rwpsOrdered = rwpsMap.values.toTypedArray()
         if (committed && firstBuf == null) {
-            this.nullables = Array(propMap!!.size) { false }
+            this.nullables = BooleanArray(propMap!!.size)
             val tNameMap = HashMap<String, Int>()
             val tempIter = rwpsMap.iterator()
             var offset = 0
@@ -258,10 +258,7 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDb
             key.position(0)
             val kv = MDBVal.callocStack(stack).mv_data(key)
 
-            val flags = stack.mallocInt(1)
-            LMDB_CHECK(mdb_dbi_flags(tx.tx, dbi.handle, flags))
-
-            val data = if ((flags.get(0) and MDB_DUPSORT) == MDB_DUPSORT) {
+            val data = if ((dbi.flags and MDB_DUPSORT) == MDB_DUPSORT) {
                 val dv = MDBVal.callocStack(stack).mv_data(stack.malloc(size))
                 dv.mv_size(size.toLong())
                 var off = 0
