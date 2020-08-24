@@ -98,8 +98,8 @@ class RWPProvider<M: LMDBObject<M>>(@PublishedApi internal val obj: LMDBObject<M
      * Uses [fromDBToObj] and [fromObjToDB] to convert between these two states.
      */
     inline fun <reified DBType, reified ObjectType> custom(
-        fromDBToObj: KFunction1<DBType, ObjectType>,
-        fromObjToDB: KFunction1<ObjectType, DBType>,
+        noinline fromDBToObj: (DBType) -> ObjectType,
+        noinline fromObjToDB: (ObjectType) -> DBType,
         prop: KProperty<ObjectType>
     ): AbstractRWP<M, ObjectType> {
         val d1 = getTypeDelegate(DBType::class, prop)
