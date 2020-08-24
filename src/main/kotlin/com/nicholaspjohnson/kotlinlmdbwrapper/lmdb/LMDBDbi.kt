@@ -20,11 +20,11 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
     val name: String = constructor.javaConstructor?.declaringClass?.simpleName
         ?: error("Must explicitly specify a name for this DBI!"),
     internal val nullStoreOption: NullStoreOption = NullStoreOption.SPEED,
-    private val flags: Int = 0
+    internal val flags: Int = 0
 ) {
     private lateinit var constOffsets: Map<KProperty1<DbiType, *>, Triple<Int, Boolean, RWPCompanion<*, *>>>
 
-    internal lateinit var nullables: Array<Boolean>
+    internal lateinit var nullables: BooleanArray
 
     internal var handle: Int = -1
         private set
@@ -182,21 +182,19 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
         val (offset, nullable, companion) = constOffsets[prop] ?: Triple(0, false, null)
         val ret = ArrayList<DbiType>()
 
-        val fastPath: Boolean = prop in constOffsets
-        val fastMethod = if (nullable) {
-            ::checkKnownFastNullPath
-        } else {
-            ::checkKnownFastPath
-        }
-
-        if (fastPath) {
-            cursorLoopFull { buffer ->
+        if (prop in constOffsets) {
+            val fastMethod = if (nullable) {
+                ::checkKnownFastNullPath
+            } else {
+                ::checkKnownFastPath
+            }
+            cursorLoop { buffer ->
                 if (fastMethod(companion!!, value, buffer, offset)) {
                     ret += constructor(BufferType.DBRead(buffer))
                 }
             }
         } else {
-            cursorLoopFull { buffer ->
+            cursorLoop { buffer ->
                 val item = constructor(BufferType.DBRead(buffer))
                 if (checkKnownSlowPath(prop, value, item)) {
                     ret += item
@@ -215,18 +213,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
         val (offset, _, companion) = constOffsets[prop] ?: Triple(0, false, null)
         val ret = ArrayList<DbiType>()
 
-        val fastPath: Boolean = prop in constOffsets
-
         @Suppress("UNCHECKED_CAST") val useFunc = equalityFunction as (Any?) -> Boolean
 
-        if (fastPath) {
-            cursorLoopFull { buffer ->
+        if (prop in constOffsets) {
+            cursorLoop { buffer ->
                 if (checkEqualityFastPath(companion!!, useFunc, buffer, offset)) {
                     ret += constructor(BufferType.DBRead(buffer))
                 }
             }
         } else {
-            cursorLoopFull { buffer ->
+            cursorLoop { buffer ->
                 val item = constructor(BufferType.DBRead(buffer))
                 if (checkEqualitySlowPath(prop, useFunc, item)) {
                     ret += item
@@ -238,7 +234,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
     }
 
     fun getElementsWithEquality(vararg equalities: Pair<KProperty1<DbiType, *>, Any?>): List<DbiType> {
-        val fastChecksList = equalities.filter { it.first in constOffsets }
+        val (fastChecksList, slowCheckList) = equalities.partition { it.first in constOffsets }
         val fastChecks = Array(fastChecksList.size) {
             val details = constOffsets.getValue(fastChecksList[it].first)
             Triple(
@@ -247,11 +243,11 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
                 fastChecksList[it].second
             )
         }
-        val slowChecks = equalities.filterNot { it.first in constOffsets }.toTypedArray()
+        val slowChecks = slowCheckList.toTypedArray()
 
         val ret = ArrayList<DbiType>()
 
-        cursorLoopFull { buffer ->
+        cursorLoop { buffer ->
             var cont = true
             var index = 0
             while (cont && index < fastChecks.size) {
