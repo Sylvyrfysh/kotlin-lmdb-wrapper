@@ -143,11 +143,12 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
         }
     }
 
-    private fun cursorLoopFull(block: (ByteBuffer) -> Unit) {
+    private fun cursorLoop(limit: Long = -1L, block: (ByteBuffer) -> Unit) {
         cursor { cursor, key, data ->
             var rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
 
-            while (rc != LMDB.MDB_NOTFOUND) {
+            var cnt = 0L
+            while (rc != LMDB.MDB_NOTFOUND && cnt++ != limit) {
                 LMDB_CHECK(rc)
                 val buffer = data.mv_data()!!
                 block(buffer)
@@ -156,18 +157,21 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
         }
     }
 
-    fun forEach(block: (DbiType) -> Unit) {
-        cursorLoopFull {
+    fun forEach(limit: Long = -1L, block: (DbiType) -> Unit) {
+        cursorLoop(limit) {
             block(constructor(BufferType.DBRead(it)))
         }
     }
 
-    fun getEach(): List<DbiType> {
-        val ret = ArrayList<DbiType>()
-        cursorLoopFull {
-            ret += constructor(BufferType.DBRead(it))
+    fun <T: MutableCollection<DbiType>> getEachTo(limit: Long = -1L, collection: T): T {
+        cursorLoop(limit) {
+            collection += constructor(BufferType.DBRead(it))
         }
-        return ret
+        return collection
+    }
+
+    fun getEach(limit: Long = -1L): List<DbiType> {
+        return getEachTo(limit, ArrayList())
     }
 
     fun <M> getElementsWithEquality(toCheck: Pair<KProperty1<DbiType, M>, M>): List<DbiType> =
