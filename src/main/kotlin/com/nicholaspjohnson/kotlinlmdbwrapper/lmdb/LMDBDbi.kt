@@ -385,15 +385,10 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
      * Returns the number of entries in the database.
      */
     fun getNumberOfEntries(): Long {
-        MemoryStack.stackPush().use { stack ->
-            val pp = stack.mallocPointer(1)
-            LMDB.mdb_txn_begin(env.handle, 0L, 0, pp)
-
+        return env.withReadTx<Long> { stack ->
             val stat = MDBStat.mallocStack(stack)
-            LMDB.mdb_stat(pp[0], handle, stat)
-
-            LMDB.mdb_txn_abort(pp[0])
-            return stat.ms_entries()
+            LMDB.mdb_stat(tx.tx, handle, stat)
+            return@withReadTx stat.ms_entries()
         }
     }
 
@@ -401,15 +396,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType>>(
      * Returns the size of the database in bytes.
      */
     fun getDBISize(): Long {
-        MemoryStack.stackPush().use { stack ->
-            val pp = stack.mallocPointer(1)
-            LMDB.mdb_txn_begin(env.handle, 0L, 0, pp)
-
+        return env.withReadTx<Long> { stack ->
             val stat = MDBStat.mallocStack(stack)
-            LMDB.mdb_stat(pp[0], handle, stat)
+            LMDB.mdb_stat(tx.tx, handle, stat)
+            return@withReadTx stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
+        }
+    }
 
-            LMDB.mdb_txn_abort(pp[0])
-            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
+    fun deleteAllEntries() {
+        env.withWriteTx {
+            LMDB.mdb_drop(tx.tx, handle, false)
         }
     }
 }
