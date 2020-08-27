@@ -34,6 +34,7 @@ open class LMDBSerEnv(
             handle = pp.get(0)
         }
 
+        LMDB.mdb_env_set_maxdbs(handle, numDbis)
         LMDB.mdb_env_set_mapsize(handle, startingSize)
         LMDB_CHECK(
             LMDB.mdb_env_open(
