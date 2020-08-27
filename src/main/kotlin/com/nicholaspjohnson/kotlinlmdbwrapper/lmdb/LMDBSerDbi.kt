@@ -350,7 +350,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
             } else {
                 LMDB_CHECK(err)
             }
-            return@getOrCreateReadTx serializeStrategy.deserialize(serializer, dv.mv_data()!!)
+            return@getOrCreateReadTx readFromBuffer(dv.mv_data()!!)
         }
     }
 }
