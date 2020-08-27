@@ -2,10 +2,20 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.dokka.gradle.DokkaTask
 
+buildscript {
+    repositories { jcenter() }
+
+    dependencies {
+        classpath(kotlin("gradle-plugin", "1.4.0"))
+        classpath(kotlin("serialization", "1.4.0"))
+    }
+}
+
 plugins {
     idea
     maven
-    kotlin("jvm") version "1.3.72"
+    kotlin("jvm") version "1.4.0"
+    kotlin("plugin.serialization") version "1.4.0"
     id("org.jetbrains.dokka") version "0.10.1"
 }
 
@@ -21,6 +31,9 @@ dependencies {
     // Kotlin deps
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
+
+    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-core", "1.0.0-RC")
+    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-protobuf", "1.0.0-RC")
 
     // LWJGL Deps
     @Suppress("INACCESSIBLE_TYPE") val lwjglNatives = when (OperatingSystem.current()) {

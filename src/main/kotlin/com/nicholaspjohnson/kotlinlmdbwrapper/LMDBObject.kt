@@ -195,9 +195,9 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType>>(private val dbi: LMDBDb
             val key = stack.malloc(keySize())
             keyFunc(key)
             key.position(0)
-            val kv = MDBVal.callocStack(stack).mv_data(key)
+            val kv = MDBVal.mallocStack(stack).mv_data(key)
 
-            val dv = MDBVal.callocStack(stack).mv_size(size.toLong())
+            val dv = MDBVal.mallocStack(stack).mv_size(size.toLong())
 
             try {
                 LMDB_CHECK(mdb_put(tx.tx, dbi.handle, kv, dv, MDB_RESERVE))
