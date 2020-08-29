@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.*
+import com.nicholaspjohnson.kotlinlmdbwrapper.DataNotFoundException
+import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.KeySerializer
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.ProtoBufSerializeStrategy
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.SerializeStrategy
@@ -100,9 +101,26 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         }
     }
 
-    private fun cursorLoop(limit: Long = -1L, block: (ByteBuffer) -> Unit) {
+    private fun cursorLoop(limit: Long = -1L, after: KeyType? = null, block: (ByteBuffer) -> Unit) {
         cursor { cursor, key, data ->
-            var rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
+            var rc = if (after == null) {
+                LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
+            } else {
+                val keyBytes = keySerializer.serialize(after)
+                key.mv_data()!!.put(keyBytes).position(0)
+                val int = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_SET_RANGE)
+                if (int != LMDB.MDB_NOTFOUND) {
+                    val arr = ByteArray(key.mv_size().toInt())
+                    key.mv_data()!!.get(arr)
+                    if (arr.contentEquals(keyBytes)) {
+                        LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
+                    } else {
+                        int
+                    }
+                } else {
+                    int
+                }
+            }
 
             var cnt = 0L
             while (rc != LMDB.MDB_NOTFOUND && cnt++ != limit) {
@@ -154,10 +172,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         }
     }
 
-    fun <M, T: MutableCollection<DbiType>> getElementsWithEqualityTo(prop: KProperty1<DbiType, M>, value: M, to: T): T {
+    fun <M, T : MutableCollection<DbiType>> getElementsWithEqualityTo(
+        prop: KProperty1<DbiType, M>,
+        value: M,
+        to: T,
+        limit: Long = -1,
+        after: KeyType? = null
+    ): T {
         require(isInit)
 
-        cursorLoop { buffer ->
+        cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
             if (prop.get(item) == value) {
                 to += item
@@ -167,10 +191,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         return to
     }
 
-    fun <M, T: MutableCollection<DbiType>> getElementsWithMemberEqualityFunctionTo(prop: KProperty1<DbiType, M>, function: (M) -> Boolean, to: T): T {
+    fun <M, T : MutableCollection<DbiType>> getElementsWithMemberEqualityFunctionTo(
+        prop: KProperty1<DbiType, M>,
+        to: T,
+        limit: Long = -1L,
+        after: KeyType? = null,
+        function: (M) -> Boolean
+    ): T {
         require(isInit)
 
-        cursorLoop { buffer ->
+        cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
             if (function(prop.get(item))) {
                 to += item
@@ -180,14 +210,24 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         return to
     }
 
-    fun <M> getElementsWithMemberEqualityFunction(prop: KProperty1<DbiType, M>, function: (M) -> Boolean): List<DbiType> {
-        return getElementsWithMemberEqualityFunctionTo(prop, function, ArrayList())
+    fun <M> getElementsWithMemberEqualityFunction(
+        prop: KProperty1<DbiType, M>,
+        limit: Long = -1L,
+        after: KeyType? = null,
+        function: (M) -> Boolean
+    ): List<DbiType> {
+        return getElementsWithMemberEqualityFunctionTo(prop, ArrayList(), limit, after, function)
     }
 
-    fun <T: MutableCollection<DbiType>> getElementsWithEqualityFunctionTo(to: T, function: (DbiType) -> Boolean): T {
+    fun <T : MutableCollection<DbiType>> getElementsWithEqualityFunctionTo(
+        to: T,
+        limit: Long = -1L,
+        after: KeyType? = null,
+        function: (DbiType) -> Boolean
+    ): T {
         require(isInit)
 
-        cursorLoop { buffer ->
+        cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
             if (function(item)) {
                 to += item
@@ -197,12 +237,21 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         return to
     }
 
-    fun getElementsWithEqualityFunction(function: (DbiType) -> Boolean): List<DbiType> {
-        return getElementsWithEqualityFunctionTo(ArrayList(), function)
+    fun getElementsWithEqualityFunction(
+        limit: Long = -1L,
+        after: KeyType? = null,
+        function: (DbiType) -> Boolean
+    ): List<DbiType> {
+        return getElementsWithEqualityFunctionTo(ArrayList(), limit, after, function)
     }
 
-    fun <M> getElementsWithEquality(prop: KProperty1<DbiType, M>, value: M): List<DbiType> {
-        return getElementsWithEqualityTo(prop, value, ArrayList())
+    fun <M> getElementsWithEquality(
+        prop: KProperty1<DbiType, M>,
+        value: M,
+        limit: Long = -1L,
+        after: KeyType? = null
+    ): List<DbiType> {
+        return getElementsWithEqualityTo(prop, value, ArrayList(), limit, after)
     }
 
     private fun readFromBuffer(buffer: ByteBuffer): DbiType {
@@ -213,6 +262,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         lowKeyObject: KeyType,
         highKeyObject: KeyType,
         endInclusive: Boolean,
+        limit: Long,
         block: (ByteBuffer) -> Unit
     ) {
         val rangeLimit = if (endInclusive) 1 else 0
@@ -237,7 +287,11 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
                 LMDB_CHECK(rc)
                 rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_GET_CURRENT)
 
-                while (rc != LMDB.MDB_NOTFOUND && LMDB.mdb_cmp(txn, handle, key, highKey) < rangeLimit) {
+                var cnt = 0L
+                while (rc != LMDB.MDB_NOTFOUND &&
+                    LMDB.mdb_cmp(txn, handle, key, highKey) < rangeLimit &&
+                    cnt++ != limit
+                ) {
                     LMDB_CHECK(rc)
                     val buffer = data.mv_data()!!
                     block(buffer)
@@ -251,18 +305,20 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         lowKeyObject: DbiType,
         highKeyObject: DbiType,
         to: T,
+        limit: Long = -1L,
         endInclusive: Boolean = false
     ): T {
-        return getElementsByKeyRangeTo(lowKeyObject.key, highKeyObject.key, to, endInclusive)
+        return getElementsByKeyRangeTo(lowKeyObject.key, highKeyObject.key, to, limit, endInclusive)
     }
 
     fun <T: MutableCollection<DbiType>> getElementsByKeyRangeTo(
         lowKeyObject: KeyType,
         highKeyObject: KeyType,
         to: T,
+        limit: Long = -1L,
         endInclusive: Boolean = false
     ): T {
-        cursorLoopKeyRange(lowKeyObject, highKeyObject, endInclusive) {
+        cursorLoopKeyRange(lowKeyObject, highKeyObject, endInclusive, limit) {
             to += readFromBuffer(it)
         }
         return to
@@ -271,34 +327,36 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     fun getElementsByKeyRange(
         lowKeyObject: KeyType,
         highKeyObject: KeyType,
+        limit: Long = -1L,
         endInclusive: Boolean = false
     ): List<DbiType> {
-        return getElementsByKeyRangeTo(lowKeyObject, highKeyObject, ArrayList(), endInclusive)
+        return getElementsByKeyRangeTo(lowKeyObject, highKeyObject, ArrayList(), limit, endInclusive)
     }
 
     fun getElementsByKeyRange(
         lowKeyObject: DbiType,
         highKeyObject: DbiType,
+        limit: Long = -1L,
         endInclusive: Boolean = false
     ): List<DbiType> {
-        return getElementsByKeyRangeTo(lowKeyObject, highKeyObject, ArrayList(), endInclusive)
+        return getElementsByKeyRangeTo(lowKeyObject, highKeyObject, ArrayList(), limit, endInclusive)
     }
 
-    fun forEach(limit: Long = -1L, block: (DbiType) -> Unit) {
-        cursorLoop(limit) {
+    fun forEach(limit: Long = -1L, after: KeyType? = null, block: (DbiType) -> Unit) {
+        cursorLoop(limit, after) {
             block(readFromBuffer(it))
         }
     }
 
-    fun <T: MutableCollection<DbiType>> getEachTo(limit: Long = -1L, collection: T): T {
-        cursorLoop(limit) {
+    fun <T : MutableCollection<DbiType>> getEachTo(collection: T, limit: Long = -1L, after: KeyType? = null): T {
+        cursorLoop(limit, after) {
             collection += readFromBuffer(it)
         }
         return collection
     }
 
-    fun getEach(limit: Long = -1L): List<DbiType> {
-        return getEachTo(limit, ArrayList())
+    fun getEach(limit: Long = -1L, after: KeyType? = null): List<DbiType> {
+        return getEachTo(ArrayList(), limit, after)
     }
 
     /**
