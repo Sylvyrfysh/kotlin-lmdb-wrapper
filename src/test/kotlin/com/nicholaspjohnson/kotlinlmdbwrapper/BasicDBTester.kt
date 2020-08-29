@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBSerEnv
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -13,7 +13,7 @@ import java.nio.file.Paths
 object BasicDBTester {
     private val isCI = System.getenv("CI") != null
 
-    private lateinit var env: LMDBSerEnv
+    private lateinit var env: LMDBEnv
     private val testObj1 = TestObj(1, 1234)
 
     private var nextID: Int = 2
@@ -30,7 +30,7 @@ object BasicDBTester {
             Files.createDirectories(Paths.get("db"))
         }
 
-        env = LMDBSerEnv(Paths.get("db"), numDbis = 32)
+        env = LMDBEnv(Paths.get("db"), numDbis = 32)
         env.openDbi(TestObj)
         env.openDbi(MixNormalNulls)
         env.openDbi(AllTypesObject)

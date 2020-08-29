@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper
+package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
@@ -15,7 +15,6 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.jvm.internal.impl.metadata.deserialization.ProtoBufUtilKt
 
 object UUIDSerializer: KSerializer<UUID> {
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("BinaryUUID") {
@@ -28,12 +27,12 @@ object UUIDSerializer: KSerializer<UUID> {
         var msb: Long? = null
         var lsb: Long? = null
         if (s.decodeSequentially()) {
-            msb = s.decodeLongElement(descriptor, 0)
-            lsb = s.decodeLongElement(descriptor, 1)
+            msb = s.decodeLongElement(descriptor, MSB_IDX)
+            lsb = s.decodeLongElement(descriptor, LSB_IDX)
         } else loop@ while (true) {
             when (val i = s.decodeElementIndex(descriptor)) {
-                MSB_IDX                      -> msb = s.decodeLongElement(descriptor, i)
-                LSB_IDX                      -> lsb = s.decodeLongElement(descriptor, i)
+                MSB_IDX                      -> msb = s.decodeLongElement(descriptor, MSB_IDX)
+                LSB_IDX                      -> lsb = s.decodeLongElement(descriptor, LSB_IDX)
                 CompositeDecoder.DECODE_DONE -> break@loop
                 else                         -> throw SerializationException("Unknown index $i")
             }
@@ -56,12 +55,6 @@ object UUIDSerializer: KSerializer<UUID> {
 
     private const val MSB_IDX = 0
     private const val LSB_IDX = 1
-}
-
-internal object UUIDKeyMarkerSerializer: KSerializer<UUID> {
-    override val descriptor: SerialDescriptor = UUIDSerializer.descriptor
-    override fun deserialize(decoder: Decoder): UUID = UUIDSerializer.deserialize(decoder)
-    override fun serialize(encoder: Encoder, value: UUID) = UUIDSerializer.serialize(encoder, value)
 }
 
 object BigIntegerSerializer: KSerializer<BigInteger> {
@@ -115,10 +108,4 @@ object InstantSerializer: KSerializer<Instant> {
     override fun serialize(encoder: Encoder, value: Instant) {
         encoder.encodeString(value.toString())
     }
-}
-
-internal object LongKeyMarkerSerializer: KSerializer<Long> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LongKey", PrimitiveKind.LONG)
-    override fun deserialize(decoder: Decoder): Long = decoder.decodeLong()
-    override fun serialize(encoder: Encoder, value: Long) = encoder.encodeLong(value)
 }

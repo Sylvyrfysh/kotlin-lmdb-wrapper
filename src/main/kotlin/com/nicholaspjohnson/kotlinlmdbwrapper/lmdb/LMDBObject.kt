@@ -10,13 +10,13 @@ import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBVal
 
 @Serializable
-abstract class LMDBSerObject<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType : Any>(@Transient internal var dbi: LMDBSerDbi<DbiType, KeyType>? = null) {
+abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(@Transient internal var dbi: LMDBDbi<DbiType, KeyType>? = null) {
     @Contextual abstract var key: KeyType
 
     fun write() {
         dbi ?: error("")
         with(dbi!!) {
-            val bytes = serializeStrategy.serialize(serializer, this@LMDBSerObject as DbiType)
+            val bytes = serializeStrategy.serialize(serializer, this@LMDBObject as DbiType)
             env.getOrCreateWriteTx { stack, tx ->
                 val kv = getKeyBuffer(stack)
 
@@ -36,7 +36,7 @@ abstract class LMDBSerObject<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType 
                 val kv = getKeyBuffer(stack)
 
                 val data = if ((flags and LMDB.MDB_DUPSORT) == LMDB.MDB_DUPSORT) {
-                    val dataBytes = dbi!!.serializeStrategy.serialize(serializer, this@LMDBSerObject as DbiType)
+                    val dataBytes = serializeStrategy.serialize(serializer, this@LMDBObject as DbiType)
                     val data = stack.malloc(dataBytes.size)
                     data.put(dataBytes)
                     data.position(0)
@@ -60,7 +60,7 @@ abstract class LMDBSerObject<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType 
     }
 
     private fun getKeyBuffer(stack: MemoryStack): MDBVal {
-        val keyBytes = dbi!!.serializeStrategy.serialize(dbi!!.keySerializer, key)
+        val keyBytes = dbi!!.keySerializer.serialize(key)
 
         val key = stack.malloc(keyBytes.size)
         key.put(keyBytes)

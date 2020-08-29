@@ -16,7 +16,7 @@ import kotlin.collections.HashSet
 /**
  * Creates a new LMDB environment at [path] with a [startingSize], [numDbis] and with [envFlags].
  */
-open class LMDBSerEnv(
+open class LMDBEnv(
     private val path: Path,
     startingSize: Long = 64L * 1024 * 1024,
     numDbis: Int = 8,
@@ -34,6 +34,7 @@ open class LMDBSerEnv(
             handle = pp.get(0)
         }
 
+        //we keep track of some internal state here as well about the dbis
         LMDB.mdb_env_set_maxdbs(handle, numDbis)
         LMDB.mdb_env_set_mapsize(handle, startingSize)
         LMDB_CHECK(
@@ -71,17 +72,17 @@ open class LMDBSerEnv(
      * Returns the size of the environment and all of the open DBI's in bytes.
      */
     fun getTotalSizeWithOpenDBIs(): Long {
-        return getEnvMetadataSize() + openDBIs.map(LMDBSerDbi<*, *>::getDBISize).sum()
+        return getEnvMetadataSize() + openDBIs.map(LMDBDbi<*, *>::getDBISize).sum()
     }
 
-    private val openDBIs = HashSet<LMDBSerDbi<*, *>>()
+    private val openDBIs = HashSet<LMDBDbi<*, *>>()
 
     /**
      * Opens [dbi], running internal initialization logic.
      *
      * Throws an [IllegalStateException] if the DBI is already open.
      */
-    fun openDbi(dbi: LMDBSerDbi<*, *>) {
+    fun openDbi(dbi: LMDBDbi<*, *>) {
         synchronized(openDBIs) {
             check(openDBIs.add(dbi)) { "Cannot open a dbi which is already open!" }
             dbi.onLoadInternal(this)
@@ -93,7 +94,7 @@ open class LMDBSerEnv(
      *
      * Throws an [IllegalStateException] if the DBI is not open.
      */
-    fun closeDbi(dbi: LMDBSerDbi<*, *>) {
+    fun closeDbi(dbi: LMDBDbi<*, *>) {
         synchronized(openDBIs) {
             check(openDBIs.remove(dbi)) { "Cannot close a dbi which is not open!" }
             dbi.onCloseInternal(this)

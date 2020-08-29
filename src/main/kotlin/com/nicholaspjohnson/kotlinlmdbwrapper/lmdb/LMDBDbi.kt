@@ -1,12 +1,10 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.*
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.KeySerializer
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.ProtoBufSerializeStrategy
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.SerializeStrategy
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.descriptors.elementNames
-import kotlinx.serialization.serializer
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
@@ -15,9 +13,9 @@ import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import kotlin.reflect.KProperty1
 
-open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
+open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     internal val serializer: KSerializer<DbiType>,
-    keySerializerIn: KSerializer<KeyType>,
+    internal val keySerializer: KeySerializer<KeyType>,
     internal val serializeStrategy: SerializeStrategy = ProtoBufSerializeStrategy.DEFAULT,
     val name: String = serializer.descriptor.serialName.takeIf(String::isNotBlank)
         ?: error("Must explicitly specify a name for this DBI!"),
@@ -25,18 +23,12 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
 ) {
     internal var handle: Int = -1
         private set
-    internal lateinit var env: LMDBSerEnv
-
-    internal val keySerializer: KSerializer<KeyType> = when (keySerializerIn) {
-        Long.serializer() -> LongKeyMarkerSerializer
-        UUIDSerializer -> UUIDKeyMarkerSerializer
-        else -> keySerializerIn
-    } as KSerializer<KeyType>
+    internal lateinit var env: LMDBEnv
 
     private var isInit = false
 
     @Synchronized
-    internal fun onLoadInternal(env: LMDBSerEnv) {
+    internal fun onLoadInternal(env: LMDBEnv) {
         require(!isInit) { "Cannot initialize an already initialized dbi!" }
         this.env = env
         preLoad()
@@ -44,9 +36,11 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
             val pp = stack.mallocPointer(1)
             val ip = stack.mallocInt(1)
             LMDB.mdb_txn_begin(env.handle, MemoryUtil.NULL, 0, pp)
-            LMDB_CHECK(
-                LMDB.mdb_dbi_open(pp[0], name, flags or LMDB.MDB_CREATE or (if (keySerializer === UUIDKeyMarkerSerializer) LMDB.MDB_REVERSEKEY else 0), ip)
-            )
+            val dbiFlags = flags or
+                    LMDB.MDB_CREATE or
+                    (if (keySerializer.needsReverseKey) LMDB.MDB_REVERSEKEY else 0) or
+                    (if (keySerializer.isConstSize && (keySerializer.keySize == 4 || keySerializer.keySize == 8)) LMDB.MDB_REVERSEKEY else 0)
+            LMDB_CHECK(LMDB.mdb_dbi_open(pp[0], name, dbiFlags, ip))
             handle = ip[0]
             LMDB.mdb_txn_commit(pp[0])
         }
@@ -68,7 +62,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
     /**
      * Closes this dbi.
      */
-    internal fun onCloseInternal(lmdbEnv: LMDBSerEnv) {
+    internal fun onCloseInternal(lmdbEnv: LMDBEnv) {
         preClose()
         LMDB.mdb_dbi_close(lmdbEnv.handle, handle)
         isInit = false
@@ -121,7 +115,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
     }
 
     /**
-     * Overload for [writeMultiple] with and [array].
+     * Overload for [writeMultiple] with an [array].
      */
     fun writeMultiple(array: Array<out DbiType>) = writeMultiple(array.iterator())
 
@@ -141,7 +135,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 key.mv_data(stack.malloc(0))
                 for (item in iterator) {
-                    val keyBytes = serializeStrategy.serialize(keySerializer, item.key)
+                    val keyBytes = keySerializer.serialize(item.key)
                     if (keyBytes.size.toLong() > key.mv_size()) {
                         key.mv_data(stack.malloc(keyBytes.size))
                     }
@@ -212,7 +206,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
     }
 
     private fun readFromBuffer(buffer: ByteBuffer): DbiType {
-        return serializeStrategy.deserialize(serializer, buffer).apply { dbi = this@LMDBSerDbi }
+        return serializeStrategy.deserialize(serializer, buffer).apply { dbi = this@LMDBDbi }
     }
 
     private fun cursorLoopKeyRange(
@@ -226,11 +220,11 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 val txn = LMDB.mdb_cursor_txn(cursor)
 
-                val lowKeyData = serializeStrategy.serialize(keySerializer, lowKeyObject)
+                val lowKeyData = keySerializer.serialize(lowKeyObject)
                 val lowBuffer = stack.malloc(lowKeyData.size)
                 lowBuffer.put(lowKeyData)
                 lowBuffer.position(0)
-                val highKeyData = serializeStrategy.serialize(keySerializer, highKeyObject)
+                val highKeyData = keySerializer.serialize(highKeyObject)
                 val highBuffer = stack.malloc(highKeyData.size)
                 highBuffer.put(highKeyData)
                 highBuffer.position(0)
@@ -337,7 +331,7 @@ open class LMDBSerDbi<DbiType : LMDBSerObject<DbiType, KeyType>, KeyType: Any>(
 
     fun read(key: KeyType): DbiType {
         return env.getOrCreateReadTx { stack, readTx ->
-            val keyBytes = serializeStrategy.serialize(keySerializer, key)
+            val keyBytes = keySerializer.serialize(key)
             val keyBuffer = stack.malloc(keyBytes.size)
             keyBuffer.put(keyBytes)
             keyBuffer.position(0)

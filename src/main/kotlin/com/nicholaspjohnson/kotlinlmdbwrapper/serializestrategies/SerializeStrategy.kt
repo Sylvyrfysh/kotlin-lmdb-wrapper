@@ -1,9 +1,9 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.BigDecimalSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.BigIntegerSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.InstantSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.UUIDSerializer
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.BigDecimalSerializer
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.BigIntegerSerializer
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.InstantSerializer
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.UUIDSerializer
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.overwriteWith
