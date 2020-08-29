@@ -137,27 +137,6 @@ object BasicDBTester {
     }
 
     @Test
-    fun `Test write multiple`() {
-        val itemsToWrite = Array(10) {
-            MultiWrite(it.toLong(), 100L + (it * 10))
-        }
-
-        assertEquals(0, MultiWrite.getNumberOfEntries())
-
-        MultiWrite.writeMultiple(itemsToWrite)
-
-        assertEquals(10, MultiWrite.getNumberOfEntries())
-
-        assertEquals(5, MultiWrite.getElementsByKeyRange(0L, 5L).size)
-        assertEquals(6, MultiWrite.getElementsByKeyRange(0L, 5L, endInclusive = true).size)
-
-        assertEquals(1, MultiWrite.getElementsWithEquality(MultiWrite::data, 110).size)
-        assertEquals(0, MultiWrite.getElementsWithEquality(MultiWrite::data, 111).size)
-
-        assertEquals(3, MultiWrite.getElementsWithMemberEqualityFunction(MultiWrite::data) { it >= 170 }.size)
-    }
-
-    @Test
     fun `Test list basics`() {
         val methodKey = nextID.toLong()
         val expectList = arrayListOf("Why", "like", "This? IDK")
