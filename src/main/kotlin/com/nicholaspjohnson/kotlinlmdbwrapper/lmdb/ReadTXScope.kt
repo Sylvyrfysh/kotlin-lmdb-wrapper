@@ -10,6 +10,7 @@ abstract class ReadTXScope<T>(val tx: LMDBTransaction) : AutoCloseable {
     fun abort() {
         check(!isClosed) { "Cannot explicitly finish twice!" }
         tx.abort()
+        isClosed = true
     }
 
     fun abortSilent() {
@@ -27,8 +28,8 @@ abstract class ReadTXScope<T>(val tx: LMDBTransaction) : AutoCloseable {
     @Throws(IllegalArgumentException::class)
     override fun close() {
         if (!isClosed) {
-            isClosed = true
             tx.abort()
+            isClosed = true
         }
     }
 }
