@@ -27,6 +27,8 @@ open class LMDBEnv(
     internal var handle: Long = -1
         private set
 
+    private val openDBIs = HashSet<LMDBDbi<*, *>>()
+
     init {
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
@@ -75,8 +77,6 @@ open class LMDBEnv(
         return getEnvMetadataSize() + openDBIs.map(LMDBDbi<*, *>::getDBISize).sum()
     }
 
-    private val openDBIs = HashSet<LMDBDbi<*, *>>()
-
     /**
      * Opens [dbi], running internal initialization logic.
      *
@@ -113,6 +113,7 @@ open class LMDBEnv(
             LMDB.mdb_env_close(handle)
             handle = -1
         }
+        internalTx = ThreadLocal.withInitial { Stack<Pair<MemoryStack, LMDBTransaction>>() }
     }
 
     @PublishedApi
