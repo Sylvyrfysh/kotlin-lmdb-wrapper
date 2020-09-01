@@ -6,7 +6,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlin.text.Charsets.UTF_8
 
 class JsonSerializeStrategy(originalJson: Json = DEFAULT_JSON) : SerializeStrategy() {
-    private var json = Json(originalJson) {}
+    private var json = Json(originalJson) { }
 
     override fun setNewSerializersModule(newSerializersModule: SerializersModule) {
         json = Json(json) {

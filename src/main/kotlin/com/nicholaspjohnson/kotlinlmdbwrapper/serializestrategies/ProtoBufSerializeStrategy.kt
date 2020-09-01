@@ -5,9 +5,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.protobuf.ProtoBuf
 
 class ProtoBufSerializeStrategy(originalProtoBuf: ProtoBuf = DEFAULT_PROTO_BUF): SerializeStrategy() {
-    private var pbuf = ProtoBuf(originalProtoBuf) {
-        encodeDefaults = false
-    }
+    private var pbuf = ProtoBuf(originalProtoBuf) { }
 
     override fun setNewSerializersModule(newSerializersModule: SerializersModule) {
         pbuf = ProtoBuf(pbuf) {
