@@ -4,6 +4,7 @@ import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
+import org.lwjgl.util.lmdb.MDBEnvInfo
 import org.lwjgl.util.lmdb.MDBStat
 import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
@@ -14,7 +15,11 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 
 /**
- * Creates a new LMDB environment at [path] with a [startingSize], [numDbis] and with [envFlags].
+ * Kotlin representation of the LMDB environment.
+ *
+ * @constructor
+ *
+ * Creates a new LMDB environment at [path].
  */
 open class LMDBEnv(
     private val path: Path,
@@ -28,6 +33,9 @@ open class LMDBEnv(
         private set
 
     private val openDBIs = HashSet<LMDBDbi<*, *>>()
+
+    var sizeInBytes: Long
+        private set
 
     init {
         MemoryStack.stackPush().use { stack ->
@@ -56,6 +64,12 @@ open class LMDBEnv(
                 436 // 0644 in decimal
             )
         )
+
+        MemoryStack.stackPush().use { stack ->
+            val stat = MDBEnvInfo.mallocStack(stack)
+            LMDB.mdb_env_info(handle, stat)
+            sizeInBytes = stat.me_mapsize()
+        }
     }
 
     /**
