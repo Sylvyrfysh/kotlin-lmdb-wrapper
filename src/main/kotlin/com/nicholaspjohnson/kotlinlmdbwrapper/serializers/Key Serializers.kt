@@ -2,6 +2,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.time.Instant
 import java.util.*
 import kotlin.text.Charsets.UTF_8
 
@@ -119,5 +120,58 @@ object StringKeySerializer: KeySerializer<String> {
 
     override fun deserialize(keyBytes: ByteArray): String {
         return keyBytes.toString(UTF_8)
+    }
+}
+
+sealed class InstantKeySerializer: KeySerializer<Instant> {
+    override val isConstSize: Boolean = true
+    override val needsReverseKey: Boolean = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN
+    override val keySize: Int = Long.SIZE_BYTES + Int.SIZE_BYTES
+
+    protected val buffer: ThreadLocal<ByteBuffer> =
+        ThreadLocal.withInitial { ByteBuffer.allocate(keySize).order(ByteOrder.nativeOrder()) }
+
+    private object InstantKeySerializerLittleEndian: InstantKeySerializer() {
+        override fun serialize(key: Instant): ByteArray {
+            val buf = buffer.get()
+
+            buf.putLong(4, key.epochSecond)
+            buf.putInt(0, key.nano)
+            return buf.array()
+        }
+
+        override fun deserialize(keyBytes: ByteArray): Instant {
+            val buf = buffer.get()
+
+            buf.put(keyBytes, 0, 12)
+            return Instant.ofEpochSecond(buf.getLong(4), buf.getInt(0).toLong())
+        }
+    }
+
+    private object InstantKeySerializerBigEndian: InstantKeySerializer() {
+        override fun serialize(key: Instant): ByteArray {
+            val buf = buffer.get()
+
+            buf.putLong(0, key.epochSecond)
+            buf.putInt(4, key.nano)
+            return buf.array()
+        }
+
+        override fun deserialize(keyBytes: ByteArray): Instant {
+            val buf = buffer.get()
+
+            buf.put(keyBytes, 0, 12)
+            return Instant.ofEpochSecond(buf.getLong(0), buf.getInt(4).toLong())
+        }
+    }
+
+    companion object {
+        operator fun invoke(): InstantKeySerializer {
+            return if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) {
+                InstantKeySerializerLittleEndian
+            } else {
+                InstantKeySerializerBigEndian
+            }
+        }
     }
 }
