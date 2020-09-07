@@ -134,7 +134,7 @@ open class LMDBEnv(
     internal var internalTx: ThreadLocal<Stack<Pair<MemoryStack, LMDBTransaction>>> =
         ThreadLocal.withInitial { Stack<Pair<MemoryStack, LMDBTransaction>>() }
 
-    internal fun getOrCreateWriteTx(block: (MemoryStack, LMDBTransaction) -> Unit) {
+    internal inline fun getOrCreateWriteTx(crossinline block: (MemoryStack, LMDBTransaction) -> Unit) {
         if (internalTx.get().empty()) {
             check(!requireExplicitTx) { "There is no live write transaction, and explicit transactions are required!" }
             withWriteTx {
