@@ -26,7 +26,7 @@ sealed class UUIDKeySerializer: KeySerializer<UUID> {
             val buf = uuidBuffer.get()
 
             buf.position(0)
-            buf.put(keyBytes, 0, 16)
+            buf.put(keyBytes, 0, keySize)
             return UUID(buf.getLong(8), buf.getLong(0))
         }
     }
@@ -44,7 +44,7 @@ sealed class UUIDKeySerializer: KeySerializer<UUID> {
             val buf = uuidBuffer.get()
 
             buf.position(0)
-            buf.put(keyBytes, 0, 16)
+            buf.put(keyBytes, 0, keySize)
             return UUID(buf.getLong(0), buf.getLong(8))
         }
     }
@@ -79,7 +79,7 @@ object LongKeySerializer: KeySerializer<Long> {
         val buf = longBuffer.get()
 
         buf.position(0)
-        buf.put(keyBytes, 0, 8)
+        buf.put(keyBytes, 0, keySize)
         return buf.getLong(0)
     }
 }
@@ -103,7 +103,7 @@ object IntKeySerializer: KeySerializer<Int> {
         val buf = longBuffer.get()
 
         buf.position(0)
-        buf.put(keyBytes, 0, 8)
+        buf.put(keyBytes, 0, keySize)
         return buf.getInt(0)
     }
 }
