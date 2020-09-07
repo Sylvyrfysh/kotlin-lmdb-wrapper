@@ -1,5 +1,12 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
+/**
+ * Used to serialize database keys. Since keys generally require binary serialization that gives the same item no
+ * matter which serialization format is being used (e.g. ProtoBuf Fixed vs. VarInt), these are separate from normal
+ * serializers.
+ *
+ * Used to serialize [KeyType].
+ */
 interface KeySerializer<KeyType> {
     /**
      * Whether or not this is a const-size key serializer. If this is true, we may be able to set optimizations in the
@@ -19,7 +26,13 @@ interface KeySerializer<KeyType> {
      */
     val keySize: Int
 
+    /**
+     * Serializes the given [key] into a [ByteArray].
+     */
     fun serialize(key: KeyType): ByteArray
 
+    /**
+     * Deserializes the given [keyBytes] into a [KeyType].
+     */
     fun deserialize(keyBytes: ByteArray): KeyType
 }
