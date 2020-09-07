@@ -25,7 +25,7 @@ Builds are offered through [JitPack](https://jitpack.io/#sylvyrfysh/kotlin-lmdb-
 You'll need to add a top level `repository` block, with this line:
 ```kotlin
 repositories {
-  maven { url = uri("https://jitpack.io") }
+  maven { url = URI("https://jitpack.io") }
 }
 ```
 And this dependency:
