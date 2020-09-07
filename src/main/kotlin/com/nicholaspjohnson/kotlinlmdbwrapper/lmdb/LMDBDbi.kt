@@ -18,8 +18,10 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     internal val serializer: KSerializer<DbiType>,
     internal val keySerializer: KeySerializer<KeyType>,
     internal val serializeStrategy: SerializeStrategy = ProtoBufSerializeStrategy.DEFAULT,
-    val name: String = serializer.descriptor.serialName.takeIf(String::isNotBlank)
-        ?: error("Must explicitly specify a name for this DBI!"),
+    useShortName: Boolean = false,
+    val name: String = serializer.descriptor.serialName.takeIf(String::isNotBlank)?.let {
+        if (useShortName) it.split(".").last() else it
+    } ?: error("Must explicitly specify a name for this DBI!"),
     internal val flags: Int = 0,
 ) {
     internal var handle: Int = -1
