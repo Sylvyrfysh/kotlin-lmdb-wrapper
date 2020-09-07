@@ -40,7 +40,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             val dbiFlags = flags or
                     LMDB.MDB_CREATE or
                     (if (keySerializer.needsReverseKey) LMDB.MDB_REVERSEKEY else 0) or
-                    (if (keySerializer.isConstSize && (keySerializer.keySize == 4 || keySerializer.keySize == 8)) LMDB.MDB_REVERSEKEY else 0)
+                    (if (keySerializer.isConstSize && (keySerializer.keySize == 4 || keySerializer.keySize == 8)) LMDB.MDB_INTEGERKEY else 0)
             LMDB_CHECK(LMDB.mdb_dbi_open(pp[0], name, dbiFlags, ip))
             handle = ip[0]
             LMDB.mdb_txn_commit(pp[0])
