@@ -1,3 +1,5 @@
+import java.net.URL
+
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.dokka.gradle.DokkaTask
@@ -16,7 +18,7 @@ plugins {
     maven
     kotlin("jvm") version "1.4.0"
     kotlin("plugin.serialization") version "1.4.0"
-    id("org.jetbrains.dokka") version "0.10.1"
+    id("org.jetbrains.dokka") version "1.4.0"
 }
 
 group = "com.nicholaspjohnson"
@@ -62,53 +64,38 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.6.2")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
-}
+tasks {
+    withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
+    }
 
-tasks.test {
-    useJUnitPlatform()
-}
+    test {
+        useJUnitPlatform()
+    }
 
-val dokka by tasks.getting(DokkaTask::class) {
-    outputFormat = "javadoc"
-    outputDirectory = "$buildDir/javadoc"
-    this.configuration.apply {
-        jdkVersion = 8
-        noStdlibLink = false
-        noJdkLink = false
-        includeNonPublic = false
-        skipDeprecated = false
-        reportUndocumented = true
-        skipEmptyPackages = true
-        targets = listOf("JVM")
-        platform = "JVM"
+    dokkaJavadoc.configure {
+        outputDirectory.set(buildDir.resolve("javadoc"))
 
-        sourceLink {
-            path = "src/main/kotlin"
-            url = "https://github.com/Sylvyrfysh/kotlin-lmdb-wrapper/blob/master/src/main/kotlin"
-            lineSuffix = "#L"
-        }
+    }
 
-        perPackageOption {
-            prefix = "com.nicholaspjohnson.kotlinlmdbwrapper.rwps"
-            includeNonPublic = true
+    withType<DokkaTask>().configureEach {
+        dokkaSourceSets {
+            configureEach {
+                jdkVersion.set(8)
+                noStdlibLink.set(false)
+                noJdkLink.set(false)
+                includeNonPublic.set(false)
+                skipDeprecated.set(false)
+                reportUndocumented.set(true)
+                skipEmptyPackages.set(true)
+                platform.set(org.jetbrains.dokka.Platform.jvm)
+
+                sourceLink {
+                    localDirectory.set(File("src/main/kotlin"))
+                    remoteUrl.set(URL("https://github.com/Sylvyrfysh/kotlin-lmdb-wrapper/blob/master/src/main/kotlin"))
+                    remoteLineSuffix.set("#L")
+                }
+            }
         }
     }
 }
-
-val dokkaJar by tasks.creating(Jar::class) {
-    group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "Assembles Kotlin docs with Dokka"
-    archiveClassifier.set("javadoc")
-    from(dokka)
-}
-artifacts.add("archives", dokkaJar)
-
-val sourcesJar by tasks.creating(Jar::class) {
-    group = JavaBasePlugin.DOCUMENTATION_GROUP
-    description = "Assembles sources JAR"
-    archiveClassifier.set("sources")
-    from(sourceSets.getByName("main").allSource)
-}
-artifacts.add("archives", sourcesJar)
