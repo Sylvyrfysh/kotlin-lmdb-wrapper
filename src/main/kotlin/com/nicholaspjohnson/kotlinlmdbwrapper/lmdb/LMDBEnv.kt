@@ -203,7 +203,7 @@ open class LMDBEnv(
             LMDB_CHECK(
                 LMDB.mdb_txn_begin(
                     handle,
-                    if (internalTx.get().empty()) 0L else internalTx.get().peek().second.tx,
+                    if (internalTx.get().empty()) 0L else internalTx.get().peek().second.also { check(!it.isReadOnly) { "Cannot nest a write transaction in a read transaction!" } }.tx,
                     0,
                     pp
                 )
