@@ -153,7 +153,7 @@ sealed class InstantKeySerializer: KeySerializer<Instant> {
             val buf = buffer.get()
 
             buf.putLong(0, key.epochSecond)
-            buf.putInt(4, key.nano)
+            buf.putInt(8, key.nano)
             return buf.array()
         }
 
@@ -161,7 +161,7 @@ sealed class InstantKeySerializer: KeySerializer<Instant> {
             val buf = buffer.get()
 
             buf.put(keyBytes, 0, 12)
-            return Instant.ofEpochSecond(buf.getLong(0), buf.getInt(4).toLong())
+            return Instant.ofEpochSecond(buf.getLong(0), buf.getInt(8).toLong())
         }
     }
 
