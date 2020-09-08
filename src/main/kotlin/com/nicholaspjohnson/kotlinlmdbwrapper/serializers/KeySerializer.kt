@@ -1,5 +1,8 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
+import org.lwjgl.system.MemoryStack
+import java.nio.ByteBuffer
+
 /**
  * Used to serialize database keys. Since keys generally require binary serialization that gives the same item no
  * matter which serialization format is being used (e.g. ProtoBuf Fixed vs. VarInt), these are separate from normal
@@ -27,12 +30,12 @@ interface KeySerializer<KeyType> {
     val keySize: Int
 
     /**
-     * Serializes the given [key] into a [ByteArray].
+     * Serializes the given [key] into a [ByteBuffer], which can be allocated on the [stack].
      */
-    fun serialize(key: KeyType): ByteArray
+    fun serialize(key: KeyType, stack: MemoryStack): ByteBuffer
 
     /**
      * Deserializes the given [keyBytes] into a [KeyType].
      */
-    fun deserialize(keyBytes: ByteArray): KeyType
+    fun deserialize(keyBytes: ByteBuffer): KeyType
 }

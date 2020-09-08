@@ -60,11 +60,6 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
     }
 
     private fun getKeyBuffer(stack: MemoryStack): MDBVal {
-        val keyBytes = dbi!!.keySerializer.serialize(key)
-
-        val key = stack.malloc(keyBytes.size)
-        key.put(keyBytes)
-        key.position(0)
-        return MDBVal.mallocStack(stack).mv_data(key)
+        return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key, stack))
     }
 }

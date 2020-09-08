@@ -108,19 +108,21 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             var rc = if (after == null) {
                 LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
             } else {
-                val keyBytes = keySerializer.serialize(after)
-                key.mv_data()!!.put(keyBytes).position(0)
-                val int = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_SET_RANGE)
-                if (int != LMDB.MDB_NOTFOUND) {
-                    val arr = ByteArray(key.mv_size().toInt())
-                    key.mv_data()!!.get(arr)
-                    if (arr.contentEquals(keyBytes)) {
-                        LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
+                MemoryStack.stackPush().use { stack ->
+                    val keyBytes = keySerializer.serialize(after, stack)
+                    keyBytes.position(0)
+                    key.mv_data()!!.put(keyBytes).position(0)
+                    keyBytes.position(0)
+                    val int = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_SET_RANGE)
+                    if (int != LMDB.MDB_NOTFOUND) {
+                        if (key.mv_data()!! == keyBytes) {
+                            LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
+                        } else {
+                            int
+                        }
                     } else {
                         int
                     }
-                } else {
-                    int
                 }
             }
 
@@ -155,12 +157,13 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 key.mv_data(stack.malloc(0))
                 for (item in iterator) {
-                    val keyBytes = keySerializer.serialize(item.key)
-                    if (keyBytes.size.toLong() > key.mv_size()) {
-                        key.mv_data(stack.malloc(keyBytes.size))
+                    val keyBytes = keySerializer.serialize(item.key, stack)
+                    keyBytes.position(0)
+                    if (keyBytes.remaining().toLong() > key.mv_size()) {
+                        key.mv_data(stack.malloc(keyBytes.remaining()))
                     }
                     with(key.mv_data()!!) {
-                        limit(keyBytes.size)
+                        limit(keyBytes.remaining())
                         put(keyBytes)
                         flip()
                     }
@@ -272,14 +275,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 val txn = LMDB.mdb_cursor_txn(cursor)
 
-                val lowKeyData = keySerializer.serialize(lowKeyObject)
-                val lowBuffer = stack.malloc(lowKeyData.size)
-                lowBuffer.put(lowKeyData)
-                lowBuffer.position(0)
-                val highKeyData = keySerializer.serialize(highKeyObject)
-                val highBuffer = stack.malloc(highKeyData.size)
-                highBuffer.put(highKeyData)
-                highBuffer.position(0)
+                val lowBuffer = keySerializer.serialize(lowKeyObject, stack)
+                val highBuffer = keySerializer.serialize(highKeyObject, stack)
 
                 val highKey = MDBVal.mallocStack(stack)
                 highKey.mv_data(highBuffer)
@@ -391,8 +388,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
 
     fun read(key: KeyType): DbiType {
         return env.getOrCreateReadTx { stack, readTx ->
-            val keyBytes = keySerializer.serialize(key)
-            val keyBuffer = stack.malloc(keyBytes.size)
+            val keyBytes = keySerializer.serialize(key, stack)
+            val keyBuffer = stack.malloc(keyBytes.remaining())
             keyBuffer.put(keyBytes)
             keyBuffer.position(0)
             val kv = MDBVal.mallocStack().mv_data(keyBuffer)
