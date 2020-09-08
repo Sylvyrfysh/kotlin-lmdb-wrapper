@@ -52,9 +52,11 @@ open class LMDBEnv(
                 handle,
                 path.apply {
                     if (!Files.exists(this)) {
-                        Files.createDirectories(this)
+                        if ((envFlags and LMDB.MDB_NOSUBDIR) != LMDB.MDB_NOSUBDIR) {
+                            Files.createDirectories(this)
+                        }
                     } else {
-                        require(Files.isDirectory(this)) {
+                        require(Files.isDirectory(this) || (envFlags and LMDB.MDB_NOSUBDIR) == LMDB.MDB_NOSUBDIR) {
                             LMDB.mdb_env_close(handle)
                             "Path must be a directory!"
                         }
