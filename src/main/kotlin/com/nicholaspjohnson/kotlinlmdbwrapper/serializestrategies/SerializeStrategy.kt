@@ -1,9 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.BigDecimalSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.BigIntegerSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.InstantSerializer
-import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.UUIDSerializer
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializers.*
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.overwriteWith
@@ -11,6 +8,7 @@ import kotlinx.serialization.modules.plus
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.nio.ByteBuffer
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.collections.ArrayList
@@ -52,6 +50,7 @@ abstract class SerializeStrategy {
             contextual(BigInteger::class, BigIntegerSerializer)
             contextual(BigDecimal::class, BigDecimalSerializer)
             contextual(Instant::class, InstantSerializer)
+            contextual(Duration::class, DurationSerializer)
         }
         private val serializers = ArrayList<SerializeStrategy>()
 

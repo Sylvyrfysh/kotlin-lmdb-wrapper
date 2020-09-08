@@ -13,6 +13,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -128,6 +129,47 @@ object InstantSerializer: KSerializer<Instant> {
     override fun serialize(encoder: Encoder, value: Instant) {
         val s = encoder.beginStructure(descriptor)
         s.encodeLongElement(descriptor, SECONDS_IDX, value.epochSecond)
+        s.encodeIntElement(descriptor, NANOS_IDX, value.nano)
+        s.endStructure(descriptor)
+    }
+
+    private const val SECONDS = "SECONDS"
+    private const val NANOS = "NANOS"
+
+    private const val SECONDS_IDX = 0
+    private const val NANOS_IDX = 1
+}
+
+object DurationSerializer: KSerializer<Duration> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("Duration") {
+        element(SECONDS, Long.serializer().descriptor)
+        element(NANOS, Int.serializer().descriptor)
+    }
+
+    override fun deserialize(decoder: Decoder): Duration {
+        val s = decoder.beginStructure(descriptor)
+        var seconds: Long? = null
+        var nanos: Int? = null
+        if (s.decodeSequentially()) {
+            seconds = s.decodeLongElement(descriptor, SECONDS_IDX)
+            nanos = s.decodeIntElement(descriptor, NANOS_IDX)
+        } else loop@ while (true) {
+            when (val i = s.decodeElementIndex(descriptor)) {
+                SECONDS_IDX -> seconds = s.decodeLongElement(descriptor, SECONDS_IDX)
+                NANOS_IDX -> nanos = s.decodeIntElement(descriptor, NANOS_IDX)
+                CompositeDecoder.DECODE_DONE -> break@loop
+                else -> throw SerializationException("Unknown index $i")
+            }
+        }
+        s.endStructure(descriptor)
+        requireNotNull(seconds)
+        requireNotNull(nanos)
+        return Duration.ofSeconds(seconds, nanos.toLong())
+    }
+
+    override fun serialize(encoder: Encoder, value: Duration) {
+        val s = encoder.beginStructure(descriptor)
+        s.encodeLongElement(descriptor, SECONDS_IDX, value.seconds)
         s.encodeIntElement(descriptor, NANOS_IDX, value.nano)
         s.endStructure(descriptor)
     }
