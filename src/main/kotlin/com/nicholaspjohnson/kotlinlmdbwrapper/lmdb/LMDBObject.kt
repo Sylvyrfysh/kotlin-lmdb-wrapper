@@ -2,7 +2,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.DataNotFoundException
 import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
-import kotlinx.serialization.Contextual
+import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.SerializeStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.lwjgl.system.MemoryStack
@@ -85,5 +85,12 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
 
     private fun getKeyBuffer(stack: MemoryStack): MDBVal {
         return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key).apply { position(0) })
+    }
+
+    /**
+     * Returns the generated [ByteArray] when serializing this item with the given [serializeStrategy].
+     */
+    fun dump(serializeStrategy: SerializeStrategy): ByteArray {
+        return serializeStrategy.serialize(dbi!!.serializer, this as DbiType)
     }
 }
