@@ -69,6 +69,6 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
     }
 
     private fun getKeyBuffer(stack: MemoryStack): MDBVal {
-        return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key).position(0))
+        return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key).apply { position(0) })
     }
 }

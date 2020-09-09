@@ -2,7 +2,7 @@ package com.nicholaspjohnson.kotlinlmdbwrapper
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
 import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -104,7 +104,10 @@ object MultiWriteTests {
     fun `Get with equality`() {
         MultiWrite.writeMultiple(tenItems)
 
-        assertEquals(3, MultiWrite.getElementsWithEqualityFunction { it.data >= 170 }.size)
+        assertEquals(
+            3,
+            MultiWrite.getElementsWithEqualityFunction(after = 4L, limit = 3L) { it.data and 2L != 0L }.size
+        )
     }
 
     @Test

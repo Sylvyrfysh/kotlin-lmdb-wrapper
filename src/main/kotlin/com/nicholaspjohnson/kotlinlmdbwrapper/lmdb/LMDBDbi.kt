@@ -104,7 +104,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
         }
     }
 
-    private fun cursorLoop(limit: Long = -1L, after: KeyType? = null, block: (ByteBuffer) -> Unit) {
+    private fun cursorLoop(limit: Long = -1L, after: KeyType? = null, block: (ByteBuffer) -> Boolean) {
         cursor { cursor, key, data ->
             var rc = if (after == null) {
                 LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
@@ -137,7 +137,9 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
             while (rc != LMDB.MDB_NOTFOUND && cnt++ != limit) {
                 LMDB_CHECK(rc)
                 val buffer = data.mv_data()!!
-                block(buffer)
+                if (!block(buffer)) {
+                    break
+                }
                 rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
             }
         }
@@ -187,11 +189,18 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
         after: KeyType? = null
     ): T {
         check(isInit) { "Cannot query the database when it is not initialized!" }
+        if (limit == 0L) {
+            return to
+        }
 
-        cursorLoop(limit, after) { buffer ->
+        var cnt = 0L
+        cursorLoop(after = after) { buffer ->
             val item = readFromBuffer(buffer)
             if (prop.get(item) == value) {
                 to += item
+                ++cnt != limit
+            } else {
+                true
             }
         }
 
@@ -207,10 +216,18 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     ): T {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        cursorLoop(limit, after) { buffer ->
+        if (limit == 0L) {
+            return to
+        }
+
+        var cnt = 0L
+        cursorLoop(after = after) { buffer ->
             val item = readFromBuffer(buffer)
             if (function(prop.get(item))) {
                 to += item
+                ++cnt != limit
+            } else {
+                true
             }
         }
 
@@ -234,10 +251,18 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     ): T {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        cursorLoop(limit, after) { buffer ->
+        if (limit == 0L) {
+            return to
+        }
+
+        var cnt = 0L
+        cursorLoop(after = after) { buffer ->
             val item = readFromBuffer(buffer)
             if (function(item)) {
                 to += item
+                ++cnt != limit
+            } else {
+                true
             }
         }
 
@@ -355,17 +380,30 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     fun forEach(limit: Long = -1L, after: KeyType? = null, block: (DbiType) -> Unit) {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        cursorLoop(limit, after) {
-            block(readFromBuffer(it))
+        if (limit == 0L) {
+            return
+        }
+
+        var cnt = 0L
+        cursorLoop(after = after) { buffer ->
+            block(readFromBuffer(buffer))
+            ++cnt != limit
         }
     }
 
     fun <T : MutableCollection<DbiType>> getEachTo(collection: T, limit: Long = -1L, after: KeyType? = null): T {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        cursorLoop(limit, after) {
-            collection += readFromBuffer(it)
+        if (limit == 0L) {
+            return collection
         }
+
+        var cnt = 0L
+        cursorLoop(after = after) { buffer ->
+            collection += readFromBuffer(buffer)
+            ++cnt != limit
+        }
+
         return collection
     }
 
