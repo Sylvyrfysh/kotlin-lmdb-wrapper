@@ -1,8 +1,7 @@
-import java.net.URL
-
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.net.URL
 
 buildscript {
     repositories { jcenter() }
@@ -21,8 +20,47 @@ plugins {
     id("org.jetbrains.dokka") version "1.4.0"
 }
 
+class SemVerBuilder {
+    var major = 0
+    var minor = 0
+    var patch = 0
+    var preRelease: String? = null
+    val buildIdentifier = ArrayList<String>()
+}
+
+fun semver(block: SemVerBuilder.() -> Unit): String {
+    val svb = SemVerBuilder()
+    block(svb)
+    return buildString {
+        append(svb.major)
+        append('.')
+        append(svb.minor)
+        append('.')
+        append(svb.patch)
+        if (!svb.preRelease.isNullOrBlank()) {
+            append('-')
+            append(svb.preRelease)
+        }
+        if (svb.buildIdentifier.isNotEmpty()) {
+            append('+')
+            append(svb.buildIdentifier[0])
+            for (i in 1 until svb.buildIdentifier.size) {
+                append('.')
+                append(svb.buildIdentifier[i])
+            }
+        }
+    }
+}
+
 group = "com.nicholaspjohnson"
-version = "0.4.0-dev"
+version = semver {
+    major = 0
+    minor = 4
+    patch = 0
+    preRelease = "dev"
+    buildIdentifier += "KXSer"
+    buildIdentifier += "PreRC"
+}
 
 repositories {
     jcenter()
