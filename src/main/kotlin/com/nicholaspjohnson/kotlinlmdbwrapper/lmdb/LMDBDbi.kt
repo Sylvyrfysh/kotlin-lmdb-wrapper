@@ -33,7 +33,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
 
     @Synchronized
     internal fun onLoadInternal(env: LMDBEnv) {
-        require(!isInit) { "Cannot initialize an already initialized dbi!" }
+        check(!isInit) { "Cannot initialize an already initialized dbi!" }
         this.env = env
         preLoad()
         MemoryStack.stackPush().use { stack ->
@@ -110,7 +110,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
                 LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
             } else {
                 MemoryStack.stackPush().use { stack ->
-                    val keyBytes = keySerializer.serialize(after, stack)
+                    val keyBytes = keySerializer.serialize(after)
                     keyBytes.position(0)
                     key.mv_data()!!.put(keyBytes).position(0)
                     keyBytes.position(0)
@@ -160,7 +160,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 key.mv_data(stack.malloc(0))
                 for (item in iterator) {
-                    val keyBytes = keySerializer.serialize(item.key, stack)
+                    val keyBytes = keySerializer.serialize(item.key)
                     keyBytes.position(0)
                     if (keyBytes.remaining().toLong() > key.mv_size()) {
                         key.mv_data(stack.malloc(keyBytes.remaining()))
@@ -278,8 +278,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             MemoryStack.stackPush().use { stack ->
                 val txn = LMDB.mdb_cursor_txn(cursor)
 
-                val lowBuffer = keySerializer.serialize(lowKeyObject, stack)
-                val highBuffer = keySerializer.serialize(highKeyObject, stack)
+                val lowBuffer = keySerializer.serialize(lowKeyObject)
+                val highBuffer = keySerializer.serialize(highKeyObject)
 
                 val highKey = MDBVal.mallocStack(stack)
                 highKey.mv_data(highBuffer)
@@ -405,7 +405,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
         return env.getOrCreateReadTx { stack, readTx ->
-            val keyBytes = keySerializer.serialize(key, stack)
+            val keyBytes = keySerializer.serialize(key)
             val keyBuffer = stack.malloc(keyBytes.remaining())
             keyBuffer.put(keyBytes)
             keyBuffer.position(0)

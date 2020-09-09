@@ -1,6 +1,7 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
 import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.internal.EnvInfo
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
@@ -42,7 +43,7 @@ open class LMDBEnv(
         private set
 
     init {
-        check(isInit) { "Cannot re-initialize the environment!" }
+        check(!isInit) { "Cannot re-initialize the environment!" }
 
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
@@ -73,6 +74,8 @@ open class LMDBEnv(
             )
         )
         check(isInit) { "The environment failed to start!" }
+
+        openDbi(EnvInfo)
 
         MemoryStack.stackPush().use { stack ->
             val stat = MDBEnvInfo.mallocStack(stack)
