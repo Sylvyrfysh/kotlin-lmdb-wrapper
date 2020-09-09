@@ -11,8 +11,13 @@ import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBVal
 
 @Serializable
-abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(@Transient internal var dbi: LMDBDbi<DbiType, KeyType>? = null) {
-    @Contextual abstract var key: KeyType
+abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
+    @Transient internal var dbi: LMDBDbi<DbiType, KeyType>? = null
+) {
+    /**
+     * The key that should be used as the database key.
+     */
+    abstract val key: KeyType
 
     fun write() {
         check(dbi?.isInit == true) { "Cannot modify the database when it is not initialized!" }
