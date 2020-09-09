@@ -65,7 +65,7 @@ open class LMDBEnv(
                     } else {
                         require(Files.isDirectory(this) || (envFlags and LMDB.MDB_NOSUBDIR) == LMDB.MDB_NOSUBDIR) {
                             LMDB.mdb_env_close(handle)
-                            "Path must be a directory!"
+                            "Path must be a directory, or envFlags must have LMDB.MDB_NOSUBDIR!"
                         }
                     }
                 }.toAbsolutePath().toString(),
