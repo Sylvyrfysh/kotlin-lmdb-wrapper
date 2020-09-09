@@ -4,6 +4,9 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.protobuf.ProtoBuf
 
+/**
+ * The standard serialization strategy. Uses ProtoBuf as the underlying serialization library.
+ */
 class ProtoBufSerializeStrategy(originalProtoBuf: ProtoBuf = DEFAULT_PROTO_BUF): SerializeStrategy() {
     private var pbuf = ProtoBuf(originalProtoBuf) { }
 
@@ -23,6 +26,10 @@ class ProtoBufSerializeStrategy(originalProtoBuf: ProtoBuf = DEFAULT_PROTO_BUF):
 
     companion object {
         private val DEFAULT_PROTO_BUF = ProtoBuf { encodeDefaults = false }
+
+        /**
+         * The default, globally registered [SerializeStrategy] for the library.
+         */
         val DEFAULT = ProtoBufSerializeStrategy(DEFAULT_PROTO_BUF)
 
         init {

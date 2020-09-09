@@ -14,6 +14,17 @@ import org.lwjgl.util.lmdb.MDBVal
 import java.nio.ByteBuffer
 import kotlin.reflect.KProperty1
 
+/**
+ * A DBI to store [LMDBObject]s in. Takes the [serializer] for the [DbiType] and the [keySerializer] for the [KeyType].
+ * Uses the [serializeStrategy], or the [ProtoBufSerializeStrategy.DEFAULT] to serialize the items to the database. The
+ * [name] will be what the database is called in the environment. The [flags] will be used to open the database, though
+ * some flags may be added based on the [keySerializer].
+ *
+ * @constructor
+ *
+ * Creates a new LMDBDbi.
+ * @param[useShortName] Whether or not the [name] should be the characters after the last period or not.
+ */
 open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     internal val serializer: KSerializer<DbiType>,
     internal val keySerializer: KeySerializer<KeyType>,
@@ -24,10 +35,20 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     } ?: error("Must explicitly specify a name for this DBI!"),
     internal val flags: Int = 0,
 ) {
+    /**
+     * Handle to the database in the [env].
+     */
     internal var handle: Int = -1
         private set
+
+    /**
+     * The environment this database is open in.
+     */
     internal lateinit var env: LMDBEnv
 
+    /**
+     * Whether or not this database has been opened and is ready for use.
+     */
     internal inline val isInit: Boolean
         get() = handle != -1
 
@@ -83,6 +104,9 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
      */
     open fun postClose() {}
 
+    /**
+     * Creates a cursor that is [readOnly] and will call the [block] with a key and data object pre-allocated.
+     */
     private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
         fun exec(stack: MemoryStack, tx: LMDBTransaction) {
             val pp = stack.mallocPointer(1)
@@ -104,6 +128,10 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
         }
     }
 
+    /**
+     * Loops over the database [after] the given key or from the start with a [limit] on how many items, or -1L for
+     * all items. Calls [block] with the [ByteBuffer] read from the database, and stops looping when it returns false.
+     */
     private fun cursorLoop(limit: Long = -1L, after: KeyType? = null, block: (ByteBuffer) -> Boolean) {
         cursor { cursor, key, data ->
             var rc = if (after == null) {

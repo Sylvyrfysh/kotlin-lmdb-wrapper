@@ -10,6 +10,10 @@ import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBVal
 
+/**
+ * The base class any object that will be written to a database will implement. Classes that extend this base class
+ * should have the [Serializable] annotation. The provided [dbi] will be where this item is stored.
+ */
 @Serializable
 abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     @Transient internal var dbi: LMDBDbi<DbiType, KeyType>? = null
@@ -19,6 +23,9 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
      */
     abstract val key: KeyType
 
+    /**
+     * Writes this item into the [dbi] of the class.
+     */
     fun write() {
         check(dbi?.isInit == true) { "Cannot modify the database when it is not initialized!" }
 
@@ -38,6 +45,9 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
         }
     }
 
+    /**
+     * Deletes this item from the database, throwing a [DataNotFoundException] is this item is not in the database.
+     */
     fun delete() {
         check(dbi?.isInit == true) { "Cannot modify the database when it is not initialized!" }
 

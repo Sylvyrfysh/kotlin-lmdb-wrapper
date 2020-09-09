@@ -5,6 +5,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlin.text.Charsets.UTF_8
 
+/**
+ * An additional [SerializeStrategy] provided to make the database easier to look into with third party tools.
+ */
 class JsonSerializeStrategy(originalJson: Json = DEFAULT_JSON) : SerializeStrategy() {
     private var json = Json(originalJson) { }
 
@@ -28,6 +31,10 @@ class JsonSerializeStrategy(originalJson: Json = DEFAULT_JSON) : SerializeStrate
             allowStructuredMapKeys = true
             encodeDefaults = false
         }
+
+        /**
+         * The default, globally registered [JsonSerializeStrategy].
+         */
         val DEFAULT = JsonSerializeStrategy(DEFAULT_JSON)
 
         init {
