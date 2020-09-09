@@ -14,7 +14,8 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
     @Contextual abstract var key: KeyType
 
     fun write() {
-        dbi ?: error("")
+        check(dbi?.isInit == true) { "Cannot modify the database when it is not initialized!" }
+
         with(dbi!!) {
             val bytes = serializeStrategy.serialize(serializer, this@LMDBObject as DbiType)
             env.getOrCreateWriteTx { stack, tx ->
@@ -29,7 +30,8 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
     }
 
     fun delete() {
-        dbi ?: error("")
+        check(dbi?.isInit == true) { "Cannot modify the database when it is not initialized!" }
+
         with(dbi!!) {
             require(handle != -1) { "DBI must be initialized to delete objects!" }
             env.getOrCreateWriteTx { stack, tx ->

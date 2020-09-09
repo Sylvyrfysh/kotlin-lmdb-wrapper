@@ -32,12 +32,18 @@ open class LMDBEnv(
     internal var handle: Long = -1
         private set
 
+    @PublishedApi
+    internal inline val isInit: Boolean
+        get() = handle != -1L
+
     private val openDBIs = HashSet<LMDBDbi<*, *>>()
 
     var sizeInBytes: Long
         private set
 
     init {
+        check(isInit) { "Cannot re-initialize the environment!" }
+
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(LMDB.mdb_env_create(pp))
@@ -45,7 +51,7 @@ open class LMDBEnv(
         }
 
         //we keep track of some internal state here as well about the dbis
-        LMDB.mdb_env_set_maxdbs(handle, numDbis)
+        LMDB.mdb_env_set_maxdbs(handle, numDbis + 1)
         LMDB.mdb_env_set_mapsize(handle, startingSize)
         LMDB_CHECK(
             LMDB.mdb_env_open(
@@ -66,6 +72,7 @@ open class LMDBEnv(
                 436 // 0644 in decimal
             )
         )
+        check(isInit) { "The environment failed to start!" }
 
         MemoryStack.stackPush().use { stack ->
             val stat = MDBEnvInfo.mallocStack(stack)
@@ -78,6 +85,8 @@ open class LMDBEnv(
      * Returns the size of the environment metadata in bytes, including the database lookup table.
      */
     fun getEnvMetadataSize(): Long {
+        check(isInit) { "Cannot query the environment when it is not initialized!" }
+
         MemoryStack.stackPush().use { stack ->
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_env_stat(handle, stat)
@@ -90,6 +99,8 @@ open class LMDBEnv(
      * Returns the size of the environment and all of the open DBI's in bytes.
      */
     fun getTotalSizeWithOpenDBIs(): Long {
+        check(isInit) { "Cannot query the environment when it is not initialized!" }
+
         return getEnvMetadataSize() + openDBIs.map(LMDBDbi<*, *>::getDBISize).sum()
     }
 
@@ -99,6 +110,8 @@ open class LMDBEnv(
      * Throws an [IllegalStateException] if the DBI is already open.
      */
     fun openDbi(dbi: LMDBDbi<*, *>) {
+        check(isInit) { "Cannot modify the environment when it is not initialized!" }
+
         synchronized(openDBIs) {
             check(openDBIs.add(dbi)) { "Cannot open a dbi which is already open!" }
             dbi.onLoadInternal(this)
@@ -111,6 +124,8 @@ open class LMDBEnv(
      * Throws an [IllegalStateException] if the DBI is not open.
      */
     fun closeDbi(dbi: LMDBDbi<*, *>) {
+        check(isInit) { "Cannot modify the environment when it is not initialized!" }
+
         synchronized(openDBIs) {
             check(openDBIs.remove(dbi)) { "Cannot close a dbi which is not open!" }
             dbi.onCloseInternal(this)
@@ -122,6 +137,7 @@ open class LMDBEnv(
      *
      * Throws an [IllegalStateException] if the environment is not open.
      */
+    @Synchronized
     fun close() {
         check(handle != -1L) { "The environment is not open!" }
         synchronized(openDBIs) {
@@ -168,6 +184,8 @@ open class LMDBEnv(
     }
 
     inline fun <T> withReadTx(crossinline block: ReadTXScope<T>.(MemoryStack) -> T): T {
+        check(isInit) { "Cannot query the environment when it is not initialized!" }
+
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(
@@ -200,12 +218,15 @@ open class LMDBEnv(
     }
 
     inline fun <T> withWriteTx(crossinline block: WriteTXScope<T>.(MemoryStack) -> T): T {
+        check(isInit) { "Cannot modify the environment when it is not initialized!" }
+
         MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
             LMDB_CHECK(
                 LMDB.mdb_txn_begin(
                     handle,
-                    if (internalTx.get().empty()) 0L else internalTx.get().peek().second.also { check(!it.isReadOnly) { "Cannot nest a write transaction in a read transaction!" } }.tx,
+                    if (internalTx.get().empty()) 0L else internalTx.get()
+                        .peek().second.also { check(!it.isReadOnly) { "Cannot nest a write transaction in a read transaction!" } }.tx,
                     0,
                     pp
                 )
@@ -228,6 +249,8 @@ open class LMDBEnv(
     }
 
     fun getAllDBINames(): List<String> {
+        check(isInit) { "Cannot query the environment when it is not initialized!" }
+
         return MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
 
@@ -251,7 +274,7 @@ open class LMDBEnv(
             val ret = ArrayList<String>()
             while (rc != LMDB.MDB_NOTFOUND) {
                 LMDB_CHECK(rc)
-                ret += Charsets.UTF_8.decode(key.mv_data()!!).toString()
+                ret += MemoryUtil.memUTF8(key.mv_data()!!)
                 rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_NEXT)
             }
 

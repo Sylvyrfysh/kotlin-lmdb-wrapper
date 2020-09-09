@@ -28,7 +28,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         private set
     internal lateinit var env: LMDBEnv
 
-    private var isInit = false
+    internal inline val isInit: Boolean
+        get() = handle != -1
 
     @Synchronized
     internal fun onLoadInternal(env: LMDBEnv) {
@@ -48,7 +49,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
             LMDB.mdb_txn_commit(pp[0])
         }
 
-        isInit = true
+        check(isInit) { "Failed to initialize the database!" }
         postLoad()
     }
 
@@ -68,7 +69,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     internal fun onCloseInternal(lmdbEnv: LMDBEnv) {
         preClose()
         LMDB.mdb_dbi_close(lmdbEnv.handle, handle)
-        isInit = false
+        handle = -1
         postClose()
     }
 
@@ -150,6 +151,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
      * Takes an [iterator], then iterates over it and writes each item to the database.
      */
     fun writeMultiple(iterator: Iterator<DbiType>) {
+        check(isInit) { "Cannot modify the database when it is not initialized!" }
+
         if (!iterator.hasNext()) {
             return
         }
@@ -184,7 +187,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         limit: Long = -1,
         after: KeyType? = null
     ): T {
-        require(isInit)
+        check(isInit) { "Cannot query the database when it is not initialized!" }
 
         cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
@@ -203,7 +206,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         after: KeyType? = null,
         function: (M) -> Boolean
     ): T {
-        require(isInit)
+        check(isInit) { "Cannot query the database when it is not initialized!" }
 
         cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
@@ -230,7 +233,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         after: KeyType? = null,
         function: (DbiType) -> Boolean
     ): T {
-        require(isInit)
+        check(isInit) { "Cannot query the database when it is not initialized!" }
 
         cursorLoop(limit, after) { buffer ->
             val item = readFromBuffer(buffer)
@@ -317,6 +320,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
         limit: Long = -1L,
         endInclusive: Boolean = false
     ): T {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         cursorLoopKeyRange(lowKeyObject, highKeyObject, endInclusive, limit) {
             to += readFromBuffer(it)
         }
@@ -342,12 +347,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     }
 
     fun forEach(limit: Long = -1L, after: KeyType? = null, block: (DbiType) -> Unit) {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         cursorLoop(limit, after) {
             block(readFromBuffer(it))
         }
     }
 
     fun <T : MutableCollection<DbiType>> getEachTo(collection: T, limit: Long = -1L, after: KeyType? = null): T {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         cursorLoop(limit, after) {
             collection += readFromBuffer(it)
         }
@@ -362,6 +371,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
      * Returns the number of entries in the database.
      */
     fun getNumberOfEntries(): Long {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         return env.withReadTx<Long> { stack ->
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_stat(tx.tx, handle, stat)
@@ -373,6 +384,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
      * Returns the size of the database in bytes.
      */
     fun getDBISize(): Long {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         return env.withReadTx<Long> { stack ->
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_stat(tx.tx, handle, stat)
@@ -381,12 +394,16 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType: Any>(
     }
 
     fun deleteAllEntries() {
+        check(isInit) { "Cannot modify the database when it is not initialized!" }
+
         env.withWriteTx {
             LMDB.mdb_drop(tx.tx, handle, false)
         }
     }
 
     fun read(key: KeyType): DbiType {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
         return env.getOrCreateReadTx { stack, readTx ->
             val keyBytes = keySerializer.serialize(key, stack)
             val keyBuffer = stack.malloc(keyBytes.remaining())
