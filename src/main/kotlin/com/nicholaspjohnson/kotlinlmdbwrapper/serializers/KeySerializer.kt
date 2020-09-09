@@ -1,6 +1,5 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
-import org.lwjgl.system.MemoryStack
 import java.nio.ByteBuffer
 
 /**
@@ -30,9 +29,15 @@ interface KeySerializer<KeyType> {
     val keySize: Int
 
     /**
-     * Serializes the given [key] into a [ByteBuffer], which can be allocated on the [stack].
+     * Whether or not the returned [ByteBuffer] should be freed. Some items are allocated on the heap rather than with
+     * constant sized thread-local buffers, and this should be true for this items.
      */
-    fun serialize(key: KeyType, stack: MemoryStack): ByteBuffer
+    val needsFree: Boolean
+
+    /**
+     * Serializes the given [key] into a [ByteBuffer]
+     */
+    fun serialize(key: KeyType): ByteBuffer
 
     /**
      * Deserializes the given [keyBytes] into a [KeyType].

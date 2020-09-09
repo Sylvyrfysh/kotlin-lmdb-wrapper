@@ -6,6 +6,7 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.lwjgl.system.MemoryStack
+import org.lwjgl.system.MemoryUtil
 import org.lwjgl.util.lmdb.LMDB
 import org.lwjgl.util.lmdb.MDBVal
 
@@ -23,6 +24,9 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
 
                 val dv = MDBVal.mallocStack(stack).mv_size(bytes.size.toLong())
                 LMDB_CHECK(LMDB.mdb_put(tx.tx, handle, kv, dv, LMDB.MDB_RESERVE))
+                if (keySerializer.needsFree) {
+                    MemoryUtil.memFree(kv.mv_data()!!)
+                }
 
                 dv.mv_data()!!.put(bytes)
             }
@@ -52,6 +56,9 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
                 }
 
                 val err = LMDB.mdb_del(tx.tx, handle, kv, data)
+                if (keySerializer.needsFree) {
+                    MemoryUtil.memFree(kv.mv_data()!!)
+                }
                 if (err == LMDB.MDB_NOTFOUND) {
                     throw DataNotFoundException("The key supplied does not have any data in the DB!")
                 } else {
@@ -62,6 +69,6 @@ abstract class LMDBObject<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>
     }
 
     private fun getKeyBuffer(stack: MemoryStack): MDBVal {
-        return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key, stack))
+        return MDBVal.mallocStack(stack).mv_data(dbi!!.keySerializer.serialize(key))
     }
 }

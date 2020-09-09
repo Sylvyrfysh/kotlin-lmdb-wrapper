@@ -1,6 +1,5 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
-import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -11,10 +10,19 @@ sealed class UUIDKeySerializer: KeySerializer<UUID> {
     override val isConstSize: Boolean = true
     override val needsReverseKey: Boolean = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN
     override val keySize: Int = Long.SIZE_BYTES * 2
+    override val needsFree: Boolean = false
 
-    private object UUIDKeySerializerLittleEndian: UUIDKeySerializer() {
-        override fun serialize(key: UUID, stack: MemoryStack): ByteBuffer {
-            val buf = stack.malloc(keySize)
+    protected val buffer = ThreadLocal.withInitial { MemoryUtil.memAlloc(keySize).order(ByteOrder.nativeOrder()) }
+
+    init {
+        Runtime.getRuntime().addShutdownHook(Thread {
+            MemoryUtil.memFree(buffer.get())
+        })
+    }
+
+    private object UUIDKeySerializerLittleEndian : UUIDKeySerializer() {
+        override fun serialize(key: UUID): ByteBuffer {
+            val buf = buffer.get()
 
             buf.putLong(8, key.mostSignificantBits)
             buf.putLong(0, key.leastSignificantBits)
@@ -27,8 +35,8 @@ sealed class UUIDKeySerializer: KeySerializer<UUID> {
     }
 
     private object UUIDKeySerializerBigEndian: UUIDKeySerializer() {
-        override fun serialize(key: UUID, stack: MemoryStack): ByteBuffer {
-            val buf = stack.malloc(keySize)
+        override fun serialize(key: UUID): ByteBuffer {
+            val buf = buffer.get()
 
             buf.putLong(0, key.mostSignificantBits)
             buf.putLong(8, key.leastSignificantBits)
@@ -55,9 +63,18 @@ object LongKeySerializer: KeySerializer<Long> {
     override val isConstSize: Boolean = true
     override val needsReverseKey: Boolean = false
     override val keySize: Int = Long.SIZE_BYTES
+    override val needsFree: Boolean = false
 
-    override fun serialize(key: Long, stack: MemoryStack): ByteBuffer {
-        val buf = stack.malloc(keySize)
+    private val buffer = ThreadLocal.withInitial { MemoryUtil.memAlloc(keySize).order(ByteOrder.nativeOrder()) }
+
+    init {
+        Runtime.getRuntime().addShutdownHook(Thread {
+            MemoryUtil.memFree(buffer.get())
+        })
+    }
+
+    override fun serialize(key: Long): ByteBuffer {
+        val buf = buffer.get()
 
         buf.putLong(0, key)
         return buf
@@ -72,9 +89,18 @@ object IntKeySerializer: KeySerializer<Int> {
     override val isConstSize: Boolean = true
     override val needsReverseKey: Boolean = false
     override val keySize: Int = Int.SIZE_BYTES
+    override val needsFree: Boolean = false
 
-    override fun serialize(key: Int, stack: MemoryStack): ByteBuffer {
-        val buf = stack.malloc(keySize)
+    private val buffer = ThreadLocal.withInitial { MemoryUtil.memAlloc(keySize).order(ByteOrder.nativeOrder()) }
+
+    init {
+        Runtime.getRuntime().addShutdownHook(Thread {
+            MemoryUtil.memFree(buffer.get())
+        })
+    }
+
+    override fun serialize(key: Int): ByteBuffer {
+        val buf = buffer.get()
 
         buf.putInt(0, key)
         return buf
@@ -89,13 +115,10 @@ object StringKeySerializer: KeySerializer<String> {
     override val isConstSize: Boolean = false
     override val needsReverseKey: Boolean = false
     override val keySize: Int = -1
+    override val needsFree: Boolean = true
 
-    override fun serialize(key: String, stack: MemoryStack): ByteBuffer {
-        val bufSize = MemoryUtil.memLengthUTF8(key, false)
-        val buf = stack.malloc(bufSize)
-        MemoryUtil.memUTF8(key, false, buf)
-
-        return buf
+    override fun serialize(key: String): ByteBuffer {
+        return MemoryUtil.memUTF8(key, false)
     }
 
     override fun deserialize(keyBytes: ByteBuffer): String {
@@ -107,10 +130,20 @@ sealed class InstantKeySerializer: KeySerializer<Instant> {
     override val isConstSize: Boolean = true
     override val needsReverseKey: Boolean = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN
     override val keySize: Int = Long.SIZE_BYTES + Int.SIZE_BYTES
+    override val needsFree: Boolean = false
 
-    private object InstantKeySerializerLittleEndian: InstantKeySerializer() {
-        override fun serialize(key: Instant, stack: MemoryStack): ByteBuffer {
-            val buf = stack.malloc(keySize)
+    protected val buffer =
+        ThreadLocal.withInitial { MemoryUtil.memAlloc(IntKeySerializer.keySize).order(ByteOrder.nativeOrder()) }
+
+    init {
+        Runtime.getRuntime().addShutdownHook(Thread {
+            MemoryUtil.memFree(buffer.get())
+        })
+    }
+
+    private object InstantKeySerializerLittleEndian : InstantKeySerializer() {
+        override fun serialize(key: Instant): ByteBuffer {
+            val buf = buffer.get()
 
             buf.putLong(4, key.epochSecond)
             buf.putInt(0, key.nano)
@@ -123,8 +156,8 @@ sealed class InstantKeySerializer: KeySerializer<Instant> {
     }
 
     private object InstantKeySerializerBigEndian: InstantKeySerializer() {
-        override fun serialize(key: Instant, stack: MemoryStack): ByteBuffer {
-            val buf = stack.malloc(keySize)
+        override fun serialize(key: Instant): ByteBuffer {
+            val buf = buffer.get()
 
             buf.putLong(0, key.epochSecond)
             buf.putInt(8, key.nano)
