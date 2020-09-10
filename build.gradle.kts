@@ -107,13 +107,16 @@ tasks {
         kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
     }
 
+    javadoc {
+        dependsOn(dokkaJavadoc)
+    }
+
     test {
         useJUnitPlatform()
     }
 
     dokkaJavadoc.configure {
         outputDirectory.set(buildDir.resolve("javadoc"))
-
     }
 
     withType<DokkaTask>().configureEach {
@@ -137,3 +140,19 @@ tasks {
         }
     }
 }
+
+val dokkaJar by tasks.creating(Jar::class) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "Assembles JavaDoc through Dokka"
+    archiveClassifier.set("javadoc")
+    from(tasks.javadoc)
+}
+artifacts.add("archives", dokkaJar)
+
+val sourceJar by tasks.creating(Jar::class) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "Assembles sources JAR"
+    archiveClassifier.set("sources")
+    from(sourceSets.getByName("main").allSource)
+}
+artifacts.add("archives", sourceJar)
