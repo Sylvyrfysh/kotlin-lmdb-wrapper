@@ -14,6 +14,8 @@ import java.nio.file.Path
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Kotlin representation of the LMDB environment.
@@ -155,7 +157,11 @@ open class LMDBEnv(
     internal var internalTx: ThreadLocal<Stack<Pair<MemoryStack, LMDBTransaction>>> =
         ThreadLocal.withInitial { Stack<Pair<MemoryStack, LMDBTransaction>>() }
 
-    internal inline fun getOrCreateWriteTx(crossinline block: (MemoryStack, LMDBTransaction) -> Unit) {
+    internal inline fun getOrCreateWriteTx(block: (MemoryStack, LMDBTransaction) -> Unit) {
+        contract {
+            callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+        }
+
         if (internalTx.get().empty()) {
             check(!requireExplicitTx) { "There is no live write transaction, and explicit transactions are required!" }
             withWriteTx {
@@ -169,7 +175,11 @@ open class LMDBEnv(
         }
     }
 
-    internal inline fun <T> getOrCreateReadTx(crossinline block: (MemoryStack, LMDBTransaction) -> T): T {
+    internal inline fun <T> getOrCreateReadTx(block: (MemoryStack, LMDBTransaction) -> T): T {
+        contract {
+            callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+        }
+
         if (internalTx.get().empty()) {
             check(!requireExplicitTx) { "There is no live read transaction, and explicit transactions are required!" }
             return withReadTx<T> {
@@ -182,11 +192,13 @@ open class LMDBEnv(
         }
     }
 
-    inline fun withReadTx(crossinline block: ReadTXScope<Unit>.(MemoryStack) -> Unit) {
-        return withReadTx<Unit>(block)
-    }
-
-    inline fun <T> withReadTx(crossinline block: ReadTXScope<T>.(MemoryStack) -> T): T {
+    /**
+     * Creates a nested read transaction on the current thread, executing [block] with the transaction.
+     */
+    inline fun <T> withReadTx(block: ReadTXScope.(MemoryStack) -> T): T {
+        contract {
+            callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+        }
         check(isInit) { "Cannot query the environment when it is not initialized!" }
 
         MemoryStack.stackPush().use { stack ->
@@ -199,13 +211,11 @@ open class LMDBEnv(
                     pp
                 )
             )
-            val txn = pp.get(0)
-            val rtx = object : ReadTXScope<T>(LMDBTransaction(true, txn)) {
-                override fun exec(stack: MemoryStack) = block(stack)
-            }
-            internalTx.get().push(stack to rtx.tx)
+            val tx = LMDBTransaction(true, pp.get(0))
+            internalTx.get().push(stack to tx)
+            val rtx = ReadTXScope(tx)
             try {
-                return rtx.exec(stack)
+                return block(rtx, stack)
             } catch (t: Throwable) {
                 rtx.abortSilent()
                 throw t
@@ -216,11 +226,13 @@ open class LMDBEnv(
         }
     }
 
-    inline fun withWriteTx(crossinline block: WriteTXScope<Unit>.(MemoryStack) -> Unit) {
-        return withWriteTx<Unit>(block)
-    }
-
-    inline fun <T> withWriteTx(crossinline block: WriteTXScope<T>.(MemoryStack) -> T): T {
+    /**
+     * Creates a nested write transaction on the current thread, executing [block] with the transaction.
+     */
+    inline fun <T> withWriteTx(block: WriteTXScope.(MemoryStack) -> T): T {
+        contract {
+            callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+        }
         check(isInit) { "Cannot modify the environment when it is not initialized!" }
 
         MemoryStack.stackPush().use { stack ->
@@ -234,13 +246,11 @@ open class LMDBEnv(
                     pp
                 )
             )
-            val txn = pp.get(0)
-            val rtx = object : WriteTXScope<T>(LMDBTransaction(false, txn)) {
-                override fun exec(stack: MemoryStack) = block(stack)
-            }
-            internalTx.get().push(stack to rtx.tx)
+            val tx = LMDBTransaction(false, pp.get(0))
+            internalTx.get().push(stack to tx)
+            val rtx = WriteTXScope(tx)
             try {
-                return rtx.exec(stack)
+                return block(rtx, stack)
             } catch (t: Throwable) {
                 rtx.abortSilent()
                 throw t
@@ -254,7 +264,7 @@ open class LMDBEnv(
     fun getAllDBINames(): List<String> {
         check(isInit) { "Cannot query the environment when it is not initialized!" }
 
-        return MemoryStack.stackPush().use { stack ->
+        MemoryStack.stackPush().use { stack ->
             val pp = stack.mallocPointer(1)
 
             val ip = stack.mallocInt(1)
@@ -284,7 +294,7 @@ open class LMDBEnv(
             LMDB.mdb_cursor_close(cursor)
             LMDB.mdb_txn_abort(txn)
 
-            return@use ret
+            return ret
         }
     }
 }

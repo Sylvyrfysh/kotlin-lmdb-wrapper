@@ -103,8 +103,9 @@ dependencies {
 }
 
 tasks {
-    withType<KotlinCompile> {
+    withType<KotlinCompile>().all {
         kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
+        kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.contracts.ExperimentalContracts"
     }
 
     javadoc {

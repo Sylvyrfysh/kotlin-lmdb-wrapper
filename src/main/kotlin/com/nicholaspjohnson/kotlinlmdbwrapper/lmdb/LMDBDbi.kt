@@ -445,10 +445,10 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     fun getNumberOfEntries(): Long {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        return env.withReadTx<Long> { stack ->
+        env.withReadTx { stack ->
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_stat(tx.tx, handle, stat)
-            return@withReadTx stat.ms_entries()
+            return stat.ms_entries()
         }
     }
 
@@ -458,10 +458,10 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     fun getDBISize(): Long {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        return env.withReadTx<Long> { stack ->
+        env.withReadTx { stack ->
             val stat = MDBStat.mallocStack(stack)
             LMDB.mdb_stat(tx.tx, handle, stat)
-            return@withReadTx stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
+            return stat.ms_psize() * (stat.ms_branch_pages() + stat.ms_leaf_pages() + stat.ms_overflow_pages())
         }
     }
 
@@ -476,7 +476,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     fun read(key: KeyType): DbiType {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
-        return env.getOrCreateReadTx { _, readTx ->
+        env.getOrCreateReadTx { _, readTx ->
             val keyBytes = keySerializer.serialize(key)
             keyBytes.position(0)
             val kv = MDBVal.mallocStack().mv_data(keyBytes)
@@ -491,7 +491,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
             } else {
                 LMDB_CHECK(err)
             }
-            return@getOrCreateReadTx readFromBuffer(dv.mv_data()!!)
+            return readFromBuffer(dv.mv_data()!!)
         }
     }
 }

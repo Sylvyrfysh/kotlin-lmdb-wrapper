@@ -1,35 +1,33 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import org.lwjgl.system.MemoryStack
-
-abstract class ReadTXScope<T>(val tx: LMDBTransaction) : AutoCloseable {
-    internal var isClosed: Boolean = false
-
-    abstract fun exec(stack: MemoryStack): T
-
+/**
+ * A DSL class for use inside read transaction blocks. Uses the given [tx] to interface with the environment.
+ */
+open class ReadTXScope(val tx: LMDBTransaction) : AutoCloseable {
     fun abort() {
-        check(!isClosed) { "Cannot explicitly finish twice!" }
+        check(!tx.isClosed) { "Cannot explicitly finish twice!" }
         tx.abort()
-        isClosed = true
     }
 
-    fun abortSilent() {
-        if (!isClosed) {
-            isClosed = true
+    /**
+     *
+     */
+    @PublishedApi
+    internal fun abortSilent() {
+        if (!tx.isClosed) {
             tx.abort()
         }
     }
 
     fun finish() {
-        check(!isClosed) { "Cannot explicitly finish twice!" }
+        check(!tx.isClosed) { "Cannot explicitly finish twice!" }
         close()
     }
 
     @Throws(IllegalArgumentException::class)
     override fun close() {
-        if (!isClosed) {
+        if (!tx.isClosed) {
             tx.abort()
-            isClosed = true
         }
     }
 }
