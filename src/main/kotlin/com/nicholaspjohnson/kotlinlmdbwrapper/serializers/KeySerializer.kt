@@ -36,7 +36,8 @@ interface KeySerializer<KeyType> {
     val needsFree: Boolean
 
     /**
-     *
+     * If the underlying serializer needs a custom compare function, this will allow it to specify it so key
+     * comparisons will work properly.
      */
     val comparator: MDBCmpFuncI?
         get() = null
