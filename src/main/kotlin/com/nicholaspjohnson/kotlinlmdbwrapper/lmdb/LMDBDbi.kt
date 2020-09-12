@@ -474,7 +474,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
         }
     }
 
-    fun read(key: KeyType): DbiType {
+    fun readOrNull(key: KeyType): DbiType? {
         check(isInit) { "Cannot query the database when it is not initialized!" }
 
         env.getOrCreateReadTx { _, readTx ->
@@ -488,11 +488,15 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
                 MemoryUtil.memFree(keyBytes)
             }
             if (err == LMDB.MDB_NOTFOUND) {
-                throw DataNotFoundException("The key supplied does not have any data in the DB!")
+                return null
             } else {
                 LMDB_CHECK(err)
             }
             return readFromBuffer(dv.mv_data()!!)
         }
+    }
+
+    fun read(key: KeyType): DbiType {
+        return readOrNull(key) ?: throw DataNotFoundException("The key supplied does not have any data in the DB!")
     }
 }
