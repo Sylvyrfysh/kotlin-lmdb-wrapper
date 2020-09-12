@@ -7,16 +7,16 @@ buildscript {
     repositories { jcenter() }
 
     dependencies {
-        classpath(kotlin("gradle-plugin", "1.4.0"))
-        classpath(kotlin("serialization", "1.4.0"))
+        classpath(kotlin("gradle-plugin", "1.4.10"))
+        classpath(kotlin("serialization", "1.4.10"))
     }
 }
 
 plugins {
     idea
     maven
-    kotlin("jvm") version "1.4.0"
-    kotlin("plugin.serialization") version "1.4.0"
+    kotlin("jvm") version "1.4.10"
+    kotlin("plugin.serialization") version "1.4.10"
     id("org.jetbrains.dokka") version "1.4.0"
 }
 
