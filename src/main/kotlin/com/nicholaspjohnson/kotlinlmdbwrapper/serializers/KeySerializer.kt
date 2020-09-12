@@ -1,5 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.serializers
 
+import org.lwjgl.util.lmdb.MDBCmpFuncI
 import java.nio.ByteBuffer
 
 /**
@@ -33,6 +34,12 @@ interface KeySerializer<KeyType> {
      * constant sized thread-local buffers, and this should be true for this items.
      */
     val needsFree: Boolean
+
+    /**
+     *
+     */
+    val comparator: MDBCmpFuncI?
+        get() = null
 
     /**
      * Serializes the given [key] into a [ByteBuffer]

@@ -67,6 +67,7 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
                     (if (keySerializer.isConstSize && (keySerializer.keySize == 4 || keySerializer.keySize == 8)) LMDB.MDB_INTEGERKEY else 0)
             LMDB_CHECK(LMDB.mdb_dbi_open(pp[0], name, dbiFlags, ip))
             handle = ip[0]
+            keySerializer.comparator?.let { LMDB.mdb_set_compare(pp[0], handle, it) }
             LMDB.mdb_txn_commit(pp[0])
         }
 
