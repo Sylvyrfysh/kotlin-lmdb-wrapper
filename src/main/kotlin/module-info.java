@@ -1,4 +1,5 @@
 module kotlin.lmdb.wrapper.main {
+    requires java.base;
     requires kotlin.stdlib;
     requires kotlinx.serialization.core.jvm;
     requires org.lwjgl;
