@@ -1,7 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.DataNotFoundException
-import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.internal.LMDB_CHECK
 import com.nicholaspjohnson.kotlinlmdbwrapper.serializestrategies.SerializeStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient

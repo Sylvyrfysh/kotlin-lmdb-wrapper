@@ -1,5 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper
 
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.DataNotFoundException
 import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBEnv
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.*

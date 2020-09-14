@@ -1,4 +1,4 @@
-package com.nicholaspjohnson.kotlinlmdbwrapper
+package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.internal
 
 import org.lwjgl.util.lmdb.LMDB.MDB_SUCCESS
 import org.lwjgl.util.lmdb.LMDB.mdb_strerror

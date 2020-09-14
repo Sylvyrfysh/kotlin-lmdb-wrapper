@@ -1,6 +1,6 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb
 
-import com.nicholaspjohnson.kotlinlmdbwrapper.LMDB_CHECK
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.internal.LMDB_CHECK
 import org.lwjgl.util.lmdb.LMDB
 import java.io.Closeable
 
