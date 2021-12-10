@@ -107,8 +107,8 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
     /**
      * Creates a cursor that is [readOnly] and will call the [block] with a key and data object pre-allocated.
      */
-    private fun cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> Unit) {
-        fun exec(stack: MemoryStack, tx: LMDBTransaction) {
+    private fun <T> cursor(readOnly: Boolean = true, block: (Long, MDBVal, MDBVal) -> T): T {
+        fun exec(stack: MemoryStack, tx: LMDBTransaction): T {
             val pp = stack.mallocPointer(1)
 
             LMDB_CHECK(LMDB.mdb_cursor_open(tx.tx, handle, pp.position(0)))
@@ -116,12 +116,14 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
             val key = MDBVal.mallocStack(stack)
             val data = MDBVal.mallocStack(stack)
 
-            block(cursor, key, data)
+            val ret = block(cursor, key, data)
 
             LMDB.mdb_cursor_close(cursor)
+
+            return ret
         }
 
-        if (readOnly) {
+        return if (readOnly) {
             env.getOrCreateReadTx(::exec)
         } else {
             env.getOrCreateWriteTx(::exec)
@@ -497,5 +499,23 @@ open class LMDBDbi<DbiType : LMDBObject<DbiType, KeyType>, KeyType : Any>(
 
     fun read(key: KeyType): DbiType {
         return readOrNull(key) ?: throw DataNotFoundException("The key supplied does not have any data in the DB!")
+    }
+
+    fun getFirstKey(): KeyType? {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
+        return cursor { cursor, key, data ->
+            val rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_FIRST)
+            return@cursor if (rc == LMDB.MDB_NOTFOUND) null else keySerializer.deserialize(key.mv_data()!!)
+        }
+    }
+
+    fun getLastKey(): KeyType? {
+        check(isInit) { "Cannot query the database when it is not initialized!" }
+
+        return cursor { cursor, key, data ->
+            val rc = LMDB.mdb_cursor_get(cursor, key, data, LMDB.MDB_LAST)
+            return@cursor if (rc == LMDB.MDB_NOTFOUND) null else keySerializer.deserialize(key.mv_data()!!)
+        }
     }
 }

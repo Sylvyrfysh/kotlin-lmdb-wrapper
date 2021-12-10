@@ -157,7 +157,7 @@ open class LMDBEnv(
     internal var internalTx: ThreadLocal<Stack<Pair<MemoryStack, LMDBTransaction>>> =
         ThreadLocal.withInitial { Stack<Pair<MemoryStack, LMDBTransaction>>() }
 
-    internal inline fun getOrCreateWriteTx(block: (MemoryStack, LMDBTransaction) -> Unit) {
+    internal inline fun <T> getOrCreateWriteTx(block: (MemoryStack, LMDBTransaction) -> T): T {
         contract {
             callsInPlace(block, InvocationKind.EXACTLY_ONCE)
         }
@@ -166,12 +166,12 @@ open class LMDBEnv(
             check(!requireExplicitTx) { "There is no live write transaction, and explicit transactions are required!" }
             withWriteTx {
                 val (stack, tx) = internalTx.get().peek()
-                block(stack, tx)
+                return block(stack, tx)
             }
         } else {
             val (stack, tx) = internalTx.get().peek()
             check(!tx.isReadOnly) { "The most recent transaction is not a write transaction, but a write was called!" }
-            block(stack, tx)
+            return block(stack, tx)
         }
     }
 
@@ -182,7 +182,7 @@ open class LMDBEnv(
 
         if (internalTx.get().empty()) {
             check(!requireExplicitTx) { "There is no live read transaction, and explicit transactions are required!" }
-            return withReadTx<T> {
+            return withReadTx {
                 val (stack, tx) = internalTx.get().peek()
                 return@withReadTx block(stack, tx)
             }

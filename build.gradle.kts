@@ -3,21 +3,12 @@ import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.URL
 
-buildscript {
-    repositories { jcenter() }
-
-    dependencies {
-        classpath(kotlin("gradle-plugin", "1.4.10"))
-        classpath(kotlin("serialization", "1.4.10"))
-    }
-}
-
 plugins {
     idea
     maven
-    kotlin("jvm") version "1.4.10"
-    kotlin("plugin.serialization") version "1.4.10"
-    id("org.jetbrains.dokka") version "1.4.0"
+    kotlin("jvm") version "1.5.31"
+    kotlin("plugin.serialization") version "1.5.31"
+    id("org.jetbrains.dokka") version "1.5.30"
 }
 
 class SemVerBuilder {
@@ -55,7 +46,7 @@ fun semver(block: SemVerBuilder.() -> Unit): String {
 group = "com.nicholaspjohnson"
 version = semver {
     major = 0
-    minor = 4
+    minor = 5
     patch = 0
     preRelease = "dev"
     buildIdentifier += "KXSer"
@@ -72,8 +63,11 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
 
-    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-core", "1.0.0-RC")
-    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-protobuf", "1.0.0-RC")
+    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-core", "1.3.0")
+    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-json", "1.3.0")
+    implementation("org.jetbrains.kotlinx", "kotlinx-serialization-protobuf", "1.3.0")
+
+    dokkaHtmlPlugin("org.jetbrains.dokka", "kotlin-as-java-plugin", "1.5.30")
 
     // LWJGL Deps
     @Suppress("INACCESSIBLE_TYPE") val lwjglNatives = when (OperatingSystem.current()) {
@@ -104,7 +98,7 @@ dependencies {
 
 tasks {
     withType<KotlinCompile>().all {
-        kotlinOptions.jvmTarget = "1.8" //we use J1.8 features
+        kotlinOptions.jvmTarget = "11" //we use J1.8 features
         kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.contracts.ExperimentalContracts"
     }
 
@@ -123,7 +117,7 @@ tasks {
     withType<DokkaTask>().configureEach {
         dokkaSourceSets {
             configureEach {
-                jdkVersion.set(8)
+                jdkVersion.set(11)
                 noStdlibLink.set(false)
                 noJdkLink.set(false)
                 includeNonPublic.set(false)

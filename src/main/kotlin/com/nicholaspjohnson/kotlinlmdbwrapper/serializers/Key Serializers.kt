@@ -148,7 +148,7 @@ object ComplexStringKeySerializer : KeySerializer<String> {
     override val needsReverseKey: Boolean = false
     override val keySize: Int = -1
     override val needsFree: Boolean = true
-    override val comparator: MDBCmpFuncI? = MDBCmpFuncI { a, b ->
+    override val comparator: MDBCmpFuncI = MDBCmpFuncI { a, b ->
         val actA = MDBVal.create(a)
         val actB = MDBVal.create(b)
         return@MDBCmpFuncI deserialize(actA.mv_data()!!).compareTo(deserialize(actB.mv_data()!!))

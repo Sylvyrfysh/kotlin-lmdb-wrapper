@@ -1,12 +1,14 @@
 package com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.internal
 
-import org.lwjgl.util.lmdb.LMDB.MDB_SUCCESS
-import org.lwjgl.util.lmdb.LMDB.mdb_strerror
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.DataNotFoundException
+import com.nicholaspjohnson.kotlinlmdbwrapper.lmdb.LMDBException
+import org.lwjgl.util.lmdb.LMDB.*
 
 /**
- * Checks that [rc] is a success code, otherwise throws a [IllegalArgumentException]
+ * Checks that [rc] is a success code, otherwise throws a [LMDBException]
  */
-@Throws(IllegalArgumentException::class)
+@Throws(LMDBException::class)
 fun LMDB_CHECK(rc: Int) {
-    check(rc == MDB_SUCCESS) { mdb_strerror(rc) }
+    if (rc == MDB_NOTFOUND) throw DataNotFoundException("The key supplied does not have any data in the DB!")
+    if (rc != MDB_SUCCESS) throw LMDBException(rc, mdb_strerror(rc))
 }
